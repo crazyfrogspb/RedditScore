@@ -136,7 +136,7 @@ class SpacyTokenizer(object):
         if self.keepwords is None:
             self.keepwords = []
 
-        normalize_flag = lambda text: bool(normalize_re.match(text))
+        normalize_flag = lambda text: bool(normalize_re.search(text))
         TO_NORMALIZE = self.nlp.vocab.add_flag(normalize_flag)
 
         twitter_handle_flag = lambda text: bool(re.compile(r"@\w{1,15}").match(text))
@@ -161,21 +161,17 @@ class SpacyTokenizer(object):
 
         self.matcher.add('STOPWORD', self._remove_token, [{STOPWORD: True}])
 
-        if self.ignorequotes:
-            self.matcher.add('SINGLE_QUOTES', self._merge_and_remove, [{'ORTH': "'"}, {'OP': '+', 'IS_ASCII': True, 'QUOTE': False}, {'ORTH': "'"}])
-            self.matcher.add('DOUBLE_QUOTES', self._merge_and_remove, [{'ORTH': '"'}, {'OP': '+', 'IS_ASCII': True, 'DOUBLEQUOTE': False}, {'ORTH': '"'}])
-
         if self.lowercase & (not self.keepcaps):
             self.matcher.add('LOWERCASE', self._lowercase, [{'IS_LOWER': False}])
         elif self.lowercase & self.keepcaps:
             self.matcher.add('LOWERCASE', self._lowercase, [{'IS_LOWER': False, 'IS_UPPER': False}])
 
-        if isinstance(self.normalize, int):
-            self.matcher.add('NORMALIZE', self._normalize, [{TO_NORMALIZE: True}])
+        if self.ignorequotes:
+            self.matcher.add('SINGLE_QUOTES', self._merge_and_remove, [{'ORTH': "'"}, {'OP': '+', 'IS_ASCII': True, 'QUOTE': False}, {'ORTH': "'"}])
+            self.matcher.add('DOUBLE_QUOTES', self._merge_and_remove, [{'ORTH': '"'}, {'OP': '+', 'IS_ASCII': True, 'DOUBLEQUOTE': False}, {'ORTH': '"'}])
 
         if self.removepunct:
             self.matcher.add('PUNCTUATION', self._remove_token, [{'IS_PUNCT': True}])
-
 
         if self.subreddits:
             self.matcher.add('SUBREDDIT', self._replace_token, [{SUBREDDIT: True}])
@@ -205,6 +201,8 @@ class SpacyTokenizer(object):
             self.matcher.add('EMAIL', self._replace_token, [{'LIKE_EMAIL': True}])
             self._replacements['EMAIL'] = self.emails
 
+        if isinstance(self.normalize, int):
+            self.matcher.add('NORMALIZE', self._normalize, [{TO_NORMALIZE: True}])
 
         if self.pos_emojis:
             if isinstance(self.pos_emojis, list) == False:
