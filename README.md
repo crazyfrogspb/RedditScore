@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # RedditScore
 Package for performing Reddit-based text analysis
 

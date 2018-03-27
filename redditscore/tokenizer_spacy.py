@@ -9,7 +9,7 @@ from spacy.tokens import Token, Span
 from spacy.tokenizer import Tokenizer
 import re, sys, os, string
 from math import log
-import multiprocessing as mp
+#import multiprocessing as mp
 try:
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
