@@ -1,11 +1,13 @@
+"""
+SpacyTokenizer: SpaCy-based tokenizer with Twitter- and Reddit-specific features
+Author: Evgenii Nikitin <e.nikitin@nyu.edu>
+"""
+
 from spacy.lang.en import English
 from spacy.matcher import Matcher
 from spacy.tokens import Token, Span
-import re
-import sys
-import os
-import string
 from spacy.tokenizer import Tokenizer
+import re, sys, os, string
 from math import log
 import multiprocessing as mp
 try:
@@ -15,51 +17,108 @@ try:
 except ModuleNotFoundError:
     print('nltk could not be imported, some features will be unavailable')
 
-
 Token.set_extension('transformed_text', default='')
 nlp = English()
 
-def merge_tokens(matcher, doc, i, matches):
-    match_id, start, end = matches[i]
-    span = doc[start:end]
-    span.merge()
-    for tok in span:
-        tok._.transformed_text = tok.text
-
-def merge_and_remove(matcher, doc, i, matches):
-    match_id, start, end = matches[i]
-    span = doc[start:end]
-    span.merge()
-    for tok in span:
-        tok._.transformed_text = ''
-
-prefix_re = re.compile(r'''^[\[\("']''')
-suffix_re = re.compile(r'''[\]\)"']$''')
 
 pos_emojis = [u'😂', u'❤', u'♥', u'😍', u'😘', u'😊', u'👌', u'💕', u'👏', u'😁', u'☺', u'♡', u'👍', u'✌', u'😏', 
 u'😉', u'🙌', u'😄']
 neg_emojis = [u'😭', u'😩', u'😒', u'😔', u'😱']
 neutral_emojis = [u'🙏']
 
+normalize_re = re.compile(r"([a-zA-Z])\1\1+")
+
+prefix_re = re.compile(r'''^[\[\("']''')
+suffix_re = re.compile(r'''[\]\)"']$''')
 def custom_tokenizer(nlp):
     return Tokenizer(nlp.vocab, prefix_search=prefix_re.search,
                                 suffix_search=suffix_re.search)
-
 nlp.tokenizer = custom_tokenizer(nlp)
 
 class SpacyTokenizer(object):
-    matcher = Matcher(nlp.vocab)
-
-    normalize_re = re.compile(r"([a-zA-Z])\1\1+")
-
     def __init__(self, **kwargs):
+        """
+        SpaCy-based tokenizer with many useful Twitter- and Reddit-specific features
+
+        Parameters
+        ----------
+        lowercase : bool, default: True
+            Whether to lowercase words
+
+        keepcaps: bool, deafult: True
+            Whether to keep ALLCAPS WORDS
+
+        normalize: int, default: 3
+            Normalization of repeated charachers. The value of parameter
+            determines the number of occurences to keep.
+            Example: "awesoooooome" -> "awesooome"
+
+        ignorequotes: bool, deafult: False
+            Whether to remove everything in double and single quotes
+
+        ignorestopwords: bool or list, deafult: False
+            Whether to ignore stopwords
+                True: attempt to get a list of stopwords from NLTK package,
+                      language is determined by the 'language' parameter
+                False: keep all words
+                list: list of stopwords to remove
+
+        keepwords: list, deafult: None
+            List of words to keep. This should be used if you want to
+            remove NLTK stopwords, but want to keep a few specific words.ignorequotes
+
+        stem: {False, 'stem', 'lemm'}, deafult: False
+            Word stemming
+                False: do not perform word stemming
+                'stem': use PorterStemmer from NLTK package
+                'lemm': use WordNetLemmatizer from NLTK package
+
+        removepunct: bool, default: True
+            Whether to remove punctuation
+
+        remove_nonunicode: bool, default: False
+            Whether to remove all non-Unicode characters
+
+        decontract: bool, deafult: False
+            Whether to perform decontraction of the common contractions
+            Example: "'ll" -> " will"
+
+        splithashtags: bool, deafult: False
+            Whether to perform hashtag splitting
+            Example: "#vladimirputinisthebest" -> "vladimir putin is the best"
+
+        twitter_handles, urls, hashtags, numbers, 
+        subreddits, reddit_usernames, emails: None or str
+            Replacement of the different types of tokens
+                None: do not perform
+                str: replacement token
+                '': special case of the replacement token, removes all occurrences
+
+        extra_patterns: None or list of tuples, default: None
+            Replacement of any user-supplied extra patterns.
+            It must be a list of tuples: (name, re_pattern, replacement_token):
+                name (str): name of the pattern
+                re_pattern (_sre.SRE_Pattern): compiled re pattern
+                replacement_token (str): replacement token
+
+        language: str, deafult: 'english'
+            Main language of the documents
+
+        pos_emojis, neg_emojis, neutral_emojis: None, True or list, deafult: None
+            Whether to replace positive, negative, and neutral emojis with the special tokens
+                None: do not perform replacement
+                True: perform replacement of the default lists of emojis
+                list: list of emojis to replace
+        """
+
         self._default_values = dict(lowercase=True, keepcaps=True, normalize=3, ignorequotes=False, ignorestopwords=False, 
                                     keepwords=None, stem=False, removepunct=True, remove_nonunicode=False, decontract=False, 
-                                    splithashtags=False, twitter_handles='TOKENTWITTERHANDLE', urls='TOKENURL', hashtags=False, 
+                                    splithashtags=False, twitter_handles='TOKENTWITTERHANDLE', urls='TOKENURL', hashtags='TOKENHASHTAG', 
                                     numbers='TOKENNUMBER', subreddits='TOKENSUBREDDIT', reddit_usernames='TOKENREDDITOR', 
-                                    emails='TOKENEMAIL', extra_patterns=None, language='english', remove_nonenglish=False,
+                                    emails='TOKENEMAIL', extra_patterns=None, language='english',
                                     pos_emojis=None, neg_emojis=None, neutral_emojis=None)
 
+        self.matcher = Matcher(nlp.vocab)
         for (prop, default) in self._default_values.items():
             setattr(self, prop, kwargs.get(prop, default))
 
@@ -78,7 +137,7 @@ class SpacyTokenizer(object):
         if self.keepwords is None:
             self.keepwords = []
 
-        normalize_flag = lambda text: bool(self.normalize_re.match(text))
+        normalize_flag = lambda text: bool(normalize_re.match(text))
         TO_NORMALIZE = nlp.vocab.add_flag(normalize_flag)
 
         twitter_handle_flag = lambda text: bool(re.compile(r"@\w{1,15}").match(text))
@@ -100,15 +159,12 @@ class SpacyTokenizer(object):
 
         stopword_flag = lambda text: bool((text in self._stopwords) & (text not in self.keepwords))
         STOPWORD = nlp.vocab.add_flag(stopword_flag)
-        #self.matcher.add('HASHTAG', merge_tokens, [{'ORTH': '#'}, {'IS_ASCII': True}])
-        #self.matcher.add('SUBREDDIT', merge_tokens, [{'ORTH': '/r'}, {'ORTH': '/'}, {'IS_ASCII': True}])
-        #self.matcher.add('REDDIT_USERNAME', merge_tokens, [{'ORTH': r'/u'}, {'ORTH': r'/'}, {'IS_ASCII': True}])
 
         self.matcher.add('STOPWORD', self._remove_token, [{STOPWORD: True}])
 
         if self.ignorequotes:
-            self.matcher.add('SINGLE_QUOTES', merge_and_remove, [{'ORTH': "'"}, {'OP': '+', 'IS_ASCII': True, 'QUOTE': False}, {'ORTH': "'"}])
-            self.matcher.add('DOUBLE_QUOTES', merge_and_remove, [{'ORTH': '"'}, {'OP': '+', 'IS_ASCII': True, 'DOUBLEQUOTE': False}, {'ORTH': '"'}])
+            self.matcher.add('SINGLE_QUOTES', self._merge_and_remove, [{'ORTH': "'"}, {'OP': '+', 'IS_ASCII': True, 'QUOTE': False}, {'ORTH': "'"}])
+            self.matcher.add('DOUBLE_QUOTES', self._merge_and_remove, [{'ORTH': '"'}, {'OP': '+', 'IS_ASCII': True, 'DOUBLEQUOTE': False}, {'ORTH': '"'}])
 
         if self.lowercase & (not self.keepcaps):
             self.matcher.add('LOWERCASE', self._lowercase, [{'IS_LOWER': False}])
@@ -133,6 +189,10 @@ class SpacyTokenizer(object):
         if self.reddit_usernames:
             self.matcher.add('REDDIT_USERNAME', self._replace_token, [{REDDIT_USERNAME: True}])
             self._replacements['REDDIT_USERNAME'] = self.reddit_usernames
+
+        if self.hashtags:
+            self.matcher.add('HASHTAG', self._replace_token, [{HASHTAG: True}])
+            self._replacements['HASHTAG'] = self.hashtags
 
         if self.urls:
             self.matcher.add('URL', self._replace_token, [{'LIKE_URL': True}])
@@ -186,13 +246,19 @@ class SpacyTokenizer(object):
                 raise Exception('Stemming method {} is not supported'.format(self.stem))
             self.matcher.add('WORD_TO_STEM', self._stem_word, [{'IS_ALPHA': True}])
 
-        if self.splithashtags:
+        if (self.splithashtags) & (not self.hashtags):
             file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 
                 os.path.join('data', 'wordsfreq.txt'))
             self.words = open(file).read().split()
             self.wordcost = dict((k, log((i+1)*log(len(self.words)))) for i,k in enumerate(self.words))
             self.maxword = max(len(x) for x in self.words)
             self.matcher.add('HASHTAG', self._split_hashtags, [{HASHTAG: True}])
+
+    def _lowercase(self, matcher, doc, i, matches):
+        match_id, start, end = matches[i]
+        span = doc[start:end]
+        for tok in span:
+            tok._.transformed_text = tok._.transformed_text.lower()
 
     def _stem_word(self, matcher, doc, i, matches):
         match_id, start, end = matches[i]
@@ -203,18 +269,11 @@ class SpacyTokenizer(object):
             elif self.stem == 'lemm':
                 tok._.transformed_text = self.stemmer.lemmatize(tok._.transformed_text)
 
-    def _lowercase(self, matcher, doc, i, matches):
-        match_id, start, end = matches[i]
-        span = doc[start:end]
-        for tok in span:
-            tok._.transformed_text = tok._.transformed_text.lower()
-
-    
     def _normalize(self, matcher, doc, i, matches):
         match_id, start, end = matches[i]
         span = doc[start:end]
         for tok in span:
-            tok._.transformed_text = self.normalize_re.sub(r"\1"*self.normalize, tok._.transformed_text)
+            tok._.transformed_text = normalize_re.sub(r"\1"*self.normalize, tok._.transformed_text)
 
     def _replace_token(self, matcher, doc, i, matches):
         match_id, start, end = matches[i]
@@ -236,6 +295,13 @@ class SpacyTokenizer(object):
             poss = self._infer_spaces(tok.text[1:]).split()
             if len(poss) > 0:
                 tok._.transformed_text = poss
+
+    def _merge_and_remove(self, matcher, doc, i, matches):
+        match_id, start, end = matches[i]
+        span = doc[start:end]
+        span.merge()
+        for tok in span:
+            tok._.transformed_text = ''
 
     def _decontract(self, sentence):
         sentence = re.sub(r"won't", "will not", sentence)
@@ -286,6 +352,13 @@ class SpacyTokenizer(object):
 
 
     def tokenize_doc(self, text):
+        """
+        Tokenize document
+        Parameters
+        ----------
+        text: str
+            Document to tokenize
+        """        
         if self.remove_nonunicode:
             try:
                 text = text.encode('utf-8').decode('unicode-escape')
@@ -311,6 +384,9 @@ class SpacyTokenizer(object):
         return tokens
 
     def tokenize_docs(self, texts, cores=2):
+        """
+        DO NOT USE
+        """
         pool = mp.Pool(processes=cores)
         results = [pool.apply(self.tokenize_doc, args=(x,)) for x in texts]
         return results
