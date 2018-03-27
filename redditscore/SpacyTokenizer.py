@@ -18,8 +18,6 @@ except ModuleNotFoundError:
     print('nltk could not be imported, some features will be unavailable')
 
 Token.set_extension('transformed_text', default='')
-nlp = English()
-
 
 pos_emojis = [u'😂', u'❤', u'♥', u'😍', u'😘', u'😊', u'👌', u'💕', u'👏', u'😁', u'☺', u'♡', u'👍', u'✌', u'😏', 
 u'😉', u'🙌', u'😄']
@@ -29,11 +27,10 @@ neutral_emojis = [u'🙏']
 normalize_re = re.compile(r"([a-zA-Z])\1\1+")
 
 prefix_re = re.compile(r'''^[\[\("']''')
-suffix_re = re.compile(r'''[\]\)"']$''')
+suffix_re = re.compile(r'''[\]\)"'?!.]$''')
 def custom_tokenizer(nlp):
     return Tokenizer(nlp.vocab, prefix_search=prefix_re.search,
                                 suffix_search=suffix_re.search)
-nlp.tokenizer = custom_tokenizer(nlp)
 
 class SpacyTokenizer(object):
     def __init__(self, **kwargs):
@@ -118,7 +115,9 @@ class SpacyTokenizer(object):
                                     emails='TOKENEMAIL', extra_patterns=None, language='english',
                                     pos_emojis=None, neg_emojis=None, neutral_emojis=None)
 
-        self.matcher = Matcher(nlp.vocab)
+        self.nlp = English()
+        self.nlp.tokenizer = custom_tokenizer(self.nlp)
+        self.matcher = Matcher(self.nlp.vocab)
         for (prop, default) in self._default_values.items():
             setattr(self, prop, kwargs.get(prop, default))
 
@@ -138,27 +137,27 @@ class SpacyTokenizer(object):
             self.keepwords = []
 
         normalize_flag = lambda text: bool(normalize_re.match(text))
-        TO_NORMALIZE = nlp.vocab.add_flag(normalize_flag)
+        TO_NORMALIZE = self.nlp.vocab.add_flag(normalize_flag)
 
         twitter_handle_flag = lambda text: bool(re.compile(r"@\w{1,15}").match(text))
-        TWITTER_HANDLE = nlp.vocab.add_flag(twitter_handle_flag)
+        TWITTER_HANDLE = self.nlp.vocab.add_flag(twitter_handle_flag)
 
         reddit_username_flag = lambda text: bool(re.compile(r"u/\w{1,20}").match(text))
-        REDDIT_USERNAME = nlp.vocab.add_flag(reddit_username_flag)
+        REDDIT_USERNAME = self.nlp.vocab.add_flag(reddit_username_flag)
 
         subreddit_flag = lambda text: bool(re.compile(r"/r/\w{1,20}").match(text))
-        SUBREDDIT = nlp.vocab.add_flag(subreddit_flag)
+        SUBREDDIT = self.nlp.vocab.add_flag(subreddit_flag)
 
         hashtag_flag = lambda text: bool(re.compile(r"#\w+[\w'-]*\w+").match(text))
-        HASHTAG = nlp.vocab.add_flag(hashtag_flag)
+        HASHTAG = self.nlp.vocab.add_flag(hashtag_flag)
 
         quote_flag = lambda text: bool(re.compile(r"'").match(text))
         doublequote_flag = lambda text: bool(re.compile(r'"').match(text))
-        QUOTE = nlp.vocab.add_flag(quote_flag)
-        DOUBLEQUOTE = nlp.vocab.add_flag(doublequote_flag)
+        QUOTE = self.nlp.vocab.add_flag(quote_flag)
+        DOUBLEQUOTE = self.nlp.vocab.add_flag(doublequote_flag)
 
         stopword_flag = lambda text: bool((text in self._stopwords) & (text not in self.keepwords))
-        STOPWORD = nlp.vocab.add_flag(stopword_flag)
+        STOPWORD = self.nlp.vocab.add_flag(stopword_flag)
 
         self.matcher.add('STOPWORD', self._remove_token, [{STOPWORD: True}])
 
@@ -233,7 +232,7 @@ class SpacyTokenizer(object):
             for extra_pattern in self.extra_patterns:
                 name, re_pattern, replacement_token = extra_pattern
                 flag = lambda text: bool(re_pattern.match(text))
-                self.flags[name] = nlp.vocab.add_flag(flag)
+                self.flags[name] = self.nlp.vocab.add_flag(flag)
                 self.matcher.add(name, self._replace_token, [{self.flags[name]: True}])
                 self._replacements[name] = replacement_token
 
@@ -369,7 +368,7 @@ class SpacyTokenizer(object):
         if self.decontract:
             text = self._decontract(text)
 
-        doc = nlp(text)
+        doc = self.nlp(text)
         for t in doc:
             t._.transformed_text = t.text
 
