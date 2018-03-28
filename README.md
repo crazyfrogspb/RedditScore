@@ -2,9 +2,9 @@
 Package for performing Reddit-based text analysis
 
 Includes:
--SpaCy-based tokenizer with Twitter- and Reddit-specific features
--Tools for quickly building Reddit-based models and performing analysis
--Tools to use pre-trained models
+- SpaCy-based tokenizer with Twitter- and Reddit-specific features
+- Tools for quickly building Reddit-based models and performing analysis
+- Tools to use pre-trained models
 
 Example:
 
