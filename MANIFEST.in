@@ -1,6 +1,6 @@
 include LICENSE
-include README.rst
-include redditscore/data/wordfreq.txt
+include README.md
+include redditscore/data/wordsfreq.txt
 
 exclude requirements.txt
 

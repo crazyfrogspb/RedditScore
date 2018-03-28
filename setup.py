@@ -24,5 +24,5 @@ setup(
     url='https://github.com/kennethreitz/samplemod',
     license=license,
     packages=find_packages(exclude=('tests', 'docs')),
-	package_data={'redditscore': ['redditscore/data/*.*']},
+	include_package_data=True,
 )
