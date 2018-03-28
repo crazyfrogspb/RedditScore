@@ -51,18 +51,18 @@ class SpacyTokenizer(object):
             Example: "awesoooooome" -> "awesooome"
 
         ignorequotes: bool, deafult: False
-            Whether to remove everything in double and single quotes
+            Whether to remove everything in double quotes
 
-        ignorestopwords: bool or list, deafult: False
+        ignorestopwords: str, False or list, deafult: False
             Whether to ignore stopwords
-                True: attempt to get a list of stopwords from NLTK package,
-                      language is determined by the 'language' parameter
+                str: language to get a list of stopwords for from NLTK package
                 False: keep all words
-                list: list of stopwords to remove
+                list: list of stopwords to remove (all words must be lowercased)
 
         keepwords: list, deafult: None
             List of words to keep. This should be used if you want to
-            remove NLTK stopwords, but want to keep a few specific words.ignorequotes
+            remove NLTK stopwords, but want to keep a few specific words.
+            All words must be lowercased.
 
         stem: {False, 'stem', 'lemm'}, deafult: False
             Word stemming
@@ -72,6 +72,9 @@ class SpacyTokenizer(object):
 
         removepunct: bool, default: True
             Whether to remove punctuation
+
+        removebreaks: bool, default: True
+            Whether to remove linebreak charachters
 
         remove_nonunicode: bool, default: False
             Whether to remove all non-Unicode characters
@@ -109,35 +112,48 @@ class SpacyTokenizer(object):
         """
 
         self._default_values = dict(lowercase=True, keepcaps=True, normalize=3, ignorequotes=False, ignorestopwords=False, 
-                                    keepwords=None, stem=False, removepunct=True, remove_nonunicode=False, decontract=False, 
-                                    splithashtags=False, twitter_handles='TOKENTWITTERHANDLE', urls='TOKENURL', hashtags='TOKENHASHTAG', 
-                                    numbers='TOKENNUMBER', subreddits='TOKENSUBREDDIT', reddit_usernames='TOKENREDDITOR', 
-                                    emails='TOKENEMAIL', extra_patterns=None, language='english',
+                                    keepwords=None, stem=False, removepunct=True, removebreaks=True,
+                                    remove_nonunicode=False, decontract=False,  splithashtags=False, twitter_handles='TOKENTWITTERHANDLE', 
+                                    urls='TOKENURL', hashtags='TOKENHASHTAG', numbers='TOKENNUMBER', subreddits='TOKENSUBREDDIT', 
+                                    reddit_usernames='TOKENREDDITOR', emails='TOKENEMAIL', extra_patterns=None, 
                                     pos_emojis=None, neg_emojis=None, neutral_emojis=None)
 
         self.nlp = English()
-        self.nlp.tokenizer = custom_tokenizer(self.nlp)
+        #self.nlp.tokenizer = custom_tokenizer(self.nlp)
+        self.merging_matcher = Matcher(self.nlp.vocab)
         self.matcher = Matcher(self.nlp.vocab)
         for (prop, default) in self._default_values.items():
             setattr(self, prop, kwargs.get(prop, default))
 
         self._replacements = {}
 
-        if (self.ignorestopwords == True) & ('nltk' in sys.modules):
-            self._stopwords = stopwords.words(self.language)
-            print('Stopwords are set to NLTK {} set'.format(self.language))
-        elif self.ignorestopwords == False:
+        if isinstance(self.ignorestopwords, str) and ('nltk' in sys.modules):
+            try:
+                self._stopwords = stopwords.words(self.ignorestopwords)
+            except OSError as e:
+                raise Exception('Language {} was not found by NLTK'.format(self.ignorestopwords))
+        elif isinstance(self.ignorestopwords, list):
+            self._stopwords = self.ignorestopwords
+        elif (self.ignorestopwords == False) or (self.ignorestopwords is None):
             self._stopwords = []
         else:
-            if self.ignorestopwords is not list:
-                raise TypeError("ignorestopwords should be a list of words or boolean")
-            self._stopwords = self.ignorestopwords
+            raise TypeError('Type {} is not supported by ignorestopwords parameter'.format(type(self.ignorestopwords)))
 
         if self.keepwords is None:
             self.keepwords = []
 
+        if (self.splithashtags) and (not self.hashtags):
+            file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 
+                os.path.join('data', 'wordsfreq.txt'))
+            self.words = open(file).read().split()
+            self.wordcost = dict((k, log((i+1)*log(len(self.words)))) for i,k in enumerate(self.words))
+            self.maxword = max(len(x) for x in self.words)
+
         normalize_flag = lambda text: bool(normalize_re.search(text))
         TO_NORMALIZE = self.nlp.vocab.add_flag(normalize_flag)
+
+        number_flag = lambda text: bool(re.compile(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?").match(text))
+        NUMBER = self.nlp.vocab.add_flag(number_flag)
 
         twitter_handle_flag = lambda text: bool(re.compile(r"@\w{1,15}").match(text))
         TWITTER_HANDLE = self.nlp.vocab.add_flag(twitter_handle_flag)
@@ -151,53 +167,60 @@ class SpacyTokenizer(object):
         hashtag_flag = lambda text: bool(re.compile(r"#\w+[\w'-]*\w+").match(text))
         HASHTAG = self.nlp.vocab.add_flag(hashtag_flag)
 
-        quote_flag = lambda text: bool(re.compile(r"'").match(text))
-        doublequote_flag = lambda text: bool(re.compile(r'"').match(text))
-        QUOTE = self.nlp.vocab.add_flag(quote_flag)
+        doublequote_flag = lambda text: bool(re.compile(r'^".*"$').match(text))
         DOUBLEQUOTE = self.nlp.vocab.add_flag(doublequote_flag)
 
-        stopword_flag = lambda text: bool((text in self._stopwords) & (text not in self.keepwords))
+        stopword_flag = lambda text: bool((text.lower() in self._stopwords) & (text.lower() not in self.keepwords))
         STOPWORD = self.nlp.vocab.add_flag(stopword_flag)
 
-        self.matcher.add('STOPWORD', self._remove_token, [{STOPWORD: True}])
+        break_flag = lambda text: bool(re.compile(r"[\r\n]+").match(text))
+        BREAK = self.nlp.vocab.add_flag(break_flag)
+
+        self.merging_matcher.add('HASHTAG', None, [{'ORTH': '#'}, {'IS_ASCII': True}])
+        self.merging_matcher.add('SUBREDDIT', None, [{'ORTH': '/r'}, {'ORTH': '/'}, {'IS_ASCII': True}])
+        self.merging_matcher.add('REDDIT_USERNAME', None, [{'ORTH': 'u'}, {'ORTH': '/'}, {'IS_ASCII': True}])
+
+        if self.ignorequotes:
+            self.merging_matcher.add('QUOTE', None, [{'ORTH': '"'}, {'OP': '*', 'IS_ASCII': True}, {'ORTH': '"'}])
 
         if self.lowercase & (not self.keepcaps):
             self.matcher.add('LOWERCASE', self._lowercase, [{'IS_LOWER': False}])
         elif self.lowercase & self.keepcaps:
             self.matcher.add('LOWERCASE', self._lowercase, [{'IS_LOWER': False, 'IS_UPPER': False}])
 
+        self.matcher.add('HASHTAG', self._hashtag_postprocess, [{HASHTAG: True}])
+        self.matcher.add('STOPWORD', self._remove_token, [{STOPWORD: True}])
+
         if self.ignorequotes:
-            self.matcher.add('SINGLE_QUOTES', self._merge_and_remove, [{'ORTH': "'"}, {'OP': '+', 'IS_ASCII': True, 'QUOTE': False}, {'ORTH': "'"}])
-            self.matcher.add('DOUBLE_QUOTES', self._merge_and_remove, [{'ORTH': '"'}, {'OP': '+', 'IS_ASCII': True, 'DOUBLEQUOTE': False}, {'ORTH': '"'}])
+            self.matcher.add('DOUBLE_QUOTES', self._remove_token, [{DOUBLEQUOTE: True}])
 
         if self.removepunct:
             self.matcher.add('PUNCTUATION', self._remove_token, [{'IS_PUNCT': True}])
 
-        if self.subreddits:
+        if self.removebreaks:
+            self.matcher.add('BREAK', self._remove_token, [{BREAK: True}])
+
+        if isinstance(self.subreddits, str):
             self.matcher.add('SUBREDDIT', self._replace_token, [{SUBREDDIT: True}])
             self._replacements['SUBREDDIT'] = self.subreddits
 
-        if self.twitter_handles:
+        if isinstance(self.twitter_handles, str):
             self.matcher.add('TWITTER_HANDLE', self._replace_token, [{TWITTER_HANDLE: True}])
             self._replacements['TWITTER_HANDLE'] = self.twitter_handles
 
-        if self.reddit_usernames:
+        if isinstance(self.reddit_usernames, str):
             self.matcher.add('REDDIT_USERNAME', self._replace_token, [{REDDIT_USERNAME: True}])
             self._replacements['REDDIT_USERNAME'] = self.reddit_usernames
 
-        if self.hashtags:
-            self.matcher.add('HASHTAG', self._replace_token, [{HASHTAG: True}])
-            self._replacements['HASHTAG'] = self.hashtags
-
-        if self.urls:
+        if isinstance(self.urls, str):
             self.matcher.add('URL', self._replace_token, [{'LIKE_URL': True}])
             self._replacements['URL'] = self.urls
 
-        if self.numbers:
-            self.matcher.add('NUMBER', self._replace_token, [{'LIKE_NUM': True}])
+        if isinstance(self.numbers, str):
+            self.matcher.add('NUMBER', self._replace_token, [{NUMBER: True}])
             self._replacements['NUMBER'] = self.numbers
 
-        if self.emails:
+        if isinstance(self.emails, str):
             self.matcher.add('EMAIL', self._replace_token, [{'LIKE_EMAIL': True}])
             self._replacements['EMAIL'] = self.emails
 
@@ -243,14 +266,6 @@ class SpacyTokenizer(object):
                 raise Exception('Stemming method {} is not supported'.format(self.stem))
             self.matcher.add('WORD_TO_STEM', self._stem_word, [{'IS_ALPHA': True}])
 
-        if (self.splithashtags) & (not self.hashtags):
-            file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 
-                os.path.join('data', 'wordsfreq.txt'))
-            self.words = open(file).read().split()
-            self.wordcost = dict((k, log((i+1)*log(len(self.words)))) for i,k in enumerate(self.words))
-            self.maxword = max(len(x) for x in self.words)
-            self.matcher.add('HASHTAG', self._split_hashtags, [{HASHTAG: True}])
-
     def _lowercase(self, matcher, doc, i, matches):
         match_id, start, end = matches[i]
         span = doc[start:end]
@@ -293,12 +308,20 @@ class SpacyTokenizer(object):
             if len(poss) > 0:
                 tok._.transformed_text = poss
 
-    def _merge_and_remove(self, matcher, doc, i, matches):
+    def _hashtag_postprocess(self, matcher, doc, i, matches):
         match_id, start, end = matches[i]
         span = doc[start:end]
-        span.merge()
         for tok in span:
-            tok._.transformed_text = ''
+            if self.hashtags:
+                tok._.transformed_text = self.hashtags
+            elif self.splithashtags:
+                poss = self._infer_spaces(tok.text[1:]).split()
+                if len(poss) > 0:
+                    tok._.transformed_text = poss
+                else:
+                    tok._.transformed_text = tok.text
+            else:
+                tok._.transformed_text = tok.text
 
     def _decontract(self, sentence):
         sentence = re.sub(r"won't", "will not", sentence)
@@ -359,14 +382,22 @@ class SpacyTokenizer(object):
         if self.remove_nonunicode:
             try:
                 text = text.encode('utf-8').decode('unicode-escape')
-                text = ''.join(filter(lambda x: x in string.printable, text))
+                text = ''.join(filter(lambda x: x in string.printable, text)).strip()
             except UnicodeDecodeError:
                 pass
 
         if self.decontract:
             text = self._decontract(text)
 
-        doc = self.nlp(text)
+        doc = self.nlp(text.strip())
+
+        matches = self.merging_matcher(doc)
+        spans = []
+        for match_id, start, end in matches:
+            spans.append(doc[start:end])
+        for span in spans:
+            span.merge()
+        
         for t in doc:
             t._.transformed_text = t.text
 
@@ -379,12 +410,3 @@ class SpacyTokenizer(object):
             elif t._.transformed_text != '':
                 tokens.append(t._.transformed_text)
         return tokens
-
-    def tokenize_docs(self, texts, cores=2):
-        """
-        DO NOT USE
-        """
-        pool = mp.Pool(processes=cores)
-        results = [pool.apply(self.tokenize_doc, args=(x,)) for x in texts]
-        return results
-
