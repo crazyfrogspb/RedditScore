@@ -15,3 +15,11 @@ Example:
 
 	Output:
 	['TOKENTWITTERHANDLE', 'fuck', 'trump', 'WHO', 'ELECTED', 'guy', 'NEG_EMOJI']
+	
+To run rests execute the following command from the root directory:
+	
+	py.test -vv
+	
+To install package:
+
+	pip install git+https://github.com/crazyfrogspb/RedditScore.git
