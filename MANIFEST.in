@@ -1,0 +1,8 @@
+include LICENSE
+include README.rst
+include redditscore/data/wordfreq.txt
+
+exclude requirements.txt
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
