@@ -25,9 +25,10 @@ neg_emojis = [u'😭', u'😩', u'😒', u'😔', u'😱']
 neutral_emojis = [u'🙏']
 
 normalize_re = re.compile(r"([a-zA-Z])\1\1+")
+urls_re = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
-prefix_re = re.compile(r'''^[\[\("']''')
-suffix_re = re.compile(r'''[\]\)"'?!.]$''')
+prefix_re = re.compile(r'''^[\[\("'\s]''')
+suffix_re = re.compile(r'''[\]\)"'?!.\s,]$''')
 def custom_tokenizer(nlp):
     return Tokenizer(nlp.vocab, prefix_search=prefix_re.search,
                                 suffix_search=suffix_re.search)
@@ -119,7 +120,7 @@ class SpacyTokenizer(object):
                                     pos_emojis=None, neg_emojis=None, neutral_emojis=None)
 
         self.nlp = English()
-        #self.nlp.tokenizer = custom_tokenizer(self.nlp)
+        self.nlp.tokenizer = custom_tokenizer(self.nlp)
         self.merging_matcher = Matcher(self.nlp.vocab)
         self.matcher = Matcher(self.nlp.vocab)
         for (prop, default) in self._default_values.items():
@@ -389,6 +390,10 @@ class SpacyTokenizer(object):
         if self.decontract:
             text = self._decontract(text)
 
+        #padding punctuation
+        text = re.sub('([,!?\(\)\[\]])', r' \1 ', text)
+        text = re.sub('\s{2,}', ' ', text)
+
         doc = self.nlp(text.strip())
 
         matches = self.merging_matcher(doc)
@@ -407,6 +412,12 @@ class SpacyTokenizer(object):
         for t in doc:
             if isinstance(t._.transformed_text, list):
                 tokens.extend(t._.transformed_text)
-            elif t._.transformed_text != '':
-                tokens.append(t._.transformed_text)
+            elif t._.transformed_text.strip() != '':
+                if '.' in t._.transformed_text:
+                    if self.removepunct:
+                        tokens.extend(t._.transformed_text.split('.'))
+                    else:
+                        tokens.extend(re.split('(\W)', t._.transformed_text))
+                else:
+                    tokens.append(t._.transformed_text.strip())
         return tokens

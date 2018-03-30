@@ -81,7 +81,8 @@ def test_stem():
 def test_removepunct():
 	tokenizer = SpacyTokenizer(removepunct=True)
 	tokens = tokenizer.tokenize_doc(punct_text)
-	assert tokens == ['this', 'is', 'the', 'text', 'which', 'contains', 'a', 'lot', 'of', 'punctuation', 'amazing', 'is', "n't", 'it', 'who', 'knows']
+	print(tokens)
+	assert tokens == ['this', 'is', 'the', 'text', 'which', 'contains', 'a', 'lot', 'of', 'punctuation', 'amazing', "isn't", 'it', 'who', 'knows']
 
 def test_removebreaks():
 	tokenizer = SpacyTokenizer(removebreaks=True)
@@ -127,7 +128,7 @@ def test_tokenizing():
 	
 	tokens = tokenizer.tokenize_doc(story_of_my_life)
 	correct_answer = ['hi', 'my', 'name', 'TOKENTWITTERHANDLE', 'I', 'looove', 'beer', 'plato', 'once', 'said', 'not', 'bad', 'way', 'to', 
-					  'phrase', 'it', 'another', 'pint', 'please', 'by', 'way', 'do', "n't", 'forget', 'to', 'visit', 'I', "'m", 'also', 'on', 
+					  'phrase', 'it', 'another', 'pint', 'please', 'by', 'way', "don't", 'forget', 'to', 'visit', "i'm", 'also', 'on', 
 					  'reddit', 'as', 'TOKENREDDITOR', 'I', 'especially', 'love', 'TOKENSUBREDDIT', 'sending', 'my', 'love', 'to', 'you', 
 					  'as', 'they', 'say', 'POS_EMOJI', '24']
 	assert tokens == correct_answer
