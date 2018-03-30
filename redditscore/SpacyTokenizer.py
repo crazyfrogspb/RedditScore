@@ -28,7 +28,7 @@ normalize_re = re.compile(r"([a-zA-Z])\1\1+")
 urls_re = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
 prefix_re = re.compile(r'''^[\[\("'\s]''')
-suffix_re = re.compile(r'''[\]\)"'?!.\s,]$''')
+suffix_re = re.compile(r'''[\]\)"'?!.\s,:;]$''')
 def custom_tokenizer(nlp):
     return Tokenizer(nlp.vocab, prefix_search=prefix_re.search,
                                 suffix_search=suffix_re.search)
@@ -372,7 +372,7 @@ class SpacyTokenizer(object):
         return " ".join(reversed(out))
 
 
-    def tokenize_doc(self, text):
+    def tokenize(self, text):
         """
         Tokenize document
         Parameters
@@ -391,7 +391,7 @@ class SpacyTokenizer(object):
             text = self._decontract(text)
 
         #padding punctuation
-        text = re.sub('([,!?\(\)\[\]])', r' \1 ', text)
+        text = re.sub('([;,!?\(\)\[\]])', r' \1 ', text)
         text = re.sub('\s{2,}', ' ', text)
 
         doc = self.nlp(text.strip())
