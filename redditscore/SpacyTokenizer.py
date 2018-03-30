@@ -9,7 +9,7 @@ from spacy.tokens import Token, Span
 from spacy.tokenizer import Tokenizer
 import re, sys, os, string
 from math import log
-#import multiprocessing as mp
+from spacy.pipeline import Pipe
 try:
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
@@ -267,6 +267,9 @@ class SpacyTokenizer(object):
                 raise Exception('Stemming method {} is not supported'.format(self.stem))
             self.matcher.add('WORD_TO_STEM', self._stem_word, [{'IS_ALPHA': True}])
 
+        self.nlp.add_pipe(self._merge_doc, name='merge_doc', first=True)
+        self.nlp.add_pipe(self._match_doc, name='match_doc', last=True)
+
     def _lowercase(self, matcher, doc, i, matches):
         match_id, start, end = matches[i]
         span = doc[start:end]
@@ -371,15 +374,7 @@ class SpacyTokenizer(object):
 
         return " ".join(reversed(out))
 
-
-    def tokenize(self, text):
-        """
-        Tokenize document
-        Parameters
-        ----------
-        text: str
-            Document to tokenize
-        """        
+    def _preprocess_text(self, text):
         if self.remove_nonunicode:
             try:
                 text = text.encode('utf-8').decode('unicode-escape')
@@ -390,23 +385,38 @@ class SpacyTokenizer(object):
         if self.decontract:
             text = self._decontract(text)
 
-        #padding punctuation
         text = re.sub('([;,!?\(\)\[\]])', r' \1 ', text)
         text = re.sub('\s{2,}', ' ', text)
 
-        doc = self.nlp(text.strip())
+        return text.strip()
 
+    def _merge_doc(self, doc):
         matches = self.merging_matcher(doc)
         spans = []
         for match_id, start, end in matches:
             spans.append(doc[start:end])
         for span in spans:
-            span.merge()
-        
+            span.merge(0)
+
         for t in doc:
             t._.transformed_text = t.text
 
+        return doc
+
+    def _match_doc(self, doc):
         matches = self.matcher(doc)
+        return doc
+
+    def tokenize(self, text):
+        """
+        Tokenize document
+        Parameters
+        ----------
+        text: str
+            Document to tokenize
+        """        
+        text = self._preprocess_text(text)
+        doc = self.nlp(text)
 
         tokens = []
         for t in doc:
@@ -421,3 +431,23 @@ class SpacyTokenizer(object):
                 else:
                     tokens.append(t._.transformed_text.strip())
         return tokens
+
+    def tokenize_docs(self, texts, batch_size=10000, n_threads=1):
+        texts = [self._preprocess_text(text) for text in texts]
+        all_tokens = []
+        for doc in self.nlp.pipe(texts, batch_size=batch_size, n_threads=n_threads):
+            tokens = []
+            for t in doc:
+                if isinstance(t._.transformed_text, list):
+                    tokens.extend(t._.transformed_text)
+                elif t._.transformed_text.strip() != '':
+                    if '.' in t._.transformed_text:
+                        if self.removepunct:
+                            tokens.extend(t._.transformed_text.split('.'))
+                        else:
+                            tokens.extend(re.split('(\W)', t._.transformed_text))
+                    else:
+                        tokens.append(t._.transformed_text.strip())
+            all_tokens.append(tokens)
+
+        return all_tokens
