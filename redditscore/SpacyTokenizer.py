@@ -18,7 +18,7 @@ except ModuleNotFoundError:
     print('nltk could not be imported, some features will be unavailable')
 
 Token.set_extension('transformed_text', default='')
-Doc.set_extension('tokens', default=[])
+Doc.set_extension('tokens', default='')
 
 pos_emojis = [u'😂', u'❤', u'♥', u'😍', u'😘', u'😊', u'👌', u'💕', u'👏', u'😁', u'☺', u'♡', u'👍', u'✌', u'😏', 
 u'😉', u'🙌', u'😄']
@@ -398,7 +398,7 @@ class SpacyTokenizer(object):
         for match_id, start, end in matches:
             spans.append(doc[start:end])
         for span in spans:
-            span.merge(0)
+            span.merge()
 
         for t in doc:
             t._.transformed_text = t.text
@@ -410,6 +410,7 @@ class SpacyTokenizer(object):
         return doc
 
     def _postproc_doc(self, doc):
+        doc._.tokens = []
         for t in doc:
             if isinstance(t._.transformed_text, list):
                 doc._.tokens.extend(t._.transformed_text)
@@ -436,6 +437,17 @@ class SpacyTokenizer(object):
         return doc._.tokens
 
     def tokenize_docs(self, texts, batch_size=10000, n_threads=1):
+        """
+        Tokenize documents in batches
+        Parameters
+        ----------
+        texts: iterable
+            Iterable with documents to process
+        batch_size: int, default: 10000
+            Batch size for processing
+        n_threads: int, deafult: 1
+            Number of parallel threads
+        """
         texts = [self._preprocess_text(text) for text in texts]
         all_tokens = []
         for doc in self.nlp.pipe(texts, batch_size=batch_size, n_threads=n_threads):
