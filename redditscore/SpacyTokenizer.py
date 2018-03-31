@@ -7,6 +7,8 @@ from spacy.lang.en import English
 from spacy.matcher import Matcher
 from spacy.tokens import Token, Span, Doc
 from spacy.tokenizer import Tokenizer
+import tldextract
+import requests
 import re, sys, os, string
 from math import log
 from spacy.pipeline import Pipe
@@ -89,12 +91,20 @@ class SpacyTokenizer(object):
             Whether to perform hashtag splitting
             Example: "#vladimirputinisthebest" -> "vladimir putin is the best"
 
-        twitter_handles, urls, hashtags, numbers, 
+        twitter_handles, hashtags, numbers, 
         subreddits, reddit_usernames, emails: None or str
             Replacement of the different types of tokens
                 None: do not perform
                 str: replacement token
                 '': special case of the replacement token, removes all occurrences
+
+        urls: None or str
+            Replacement of parsed URLs
+                None: do not perform
+                str: replacement token
+                '': special case of the replacement token, removes all occurrences
+                'domain': extract domain
+                'domain_unwrap': extract domain after 'unwwraping links like t.co/'
 
         extra_patterns: None or list of tuples, default: None
             Replacement of any user-supplied extra patterns.
@@ -154,28 +164,28 @@ class SpacyTokenizer(object):
         normalize_flag = lambda text: bool(normalize_re.search(text))
         TO_NORMALIZE = self.nlp.vocab.add_flag(normalize_flag)
 
-        number_flag = lambda text: bool(re.compile(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?").match(text))
+        number_flag = lambda text: bool(re.compile(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?").fullmatch(text))
         NUMBER = self.nlp.vocab.add_flag(number_flag)
 
-        twitter_handle_flag = lambda text: bool(re.compile(r"@\w{1,15}").match(text))
+        twitter_handle_flag = lambda text: bool(re.compile(r"@\w{1,15}").fullmatch(text))
         TWITTER_HANDLE = self.nlp.vocab.add_flag(twitter_handle_flag)
 
-        reddit_username_flag = lambda text: bool(re.compile(r"u/\w{1,20}").match(text))
+        reddit_username_flag = lambda text: bool(re.compile(r"u/\w{1,20}").fullmatch(text))
         REDDIT_USERNAME = self.nlp.vocab.add_flag(reddit_username_flag)
 
-        subreddit_flag = lambda text: bool(re.compile(r"/r/\w{1,20}").match(text))
+        subreddit_flag = lambda text: bool(re.compile(r"/r/\w{1,20}").fullmatch(text))
         SUBREDDIT = self.nlp.vocab.add_flag(subreddit_flag)
 
-        hashtag_flag = lambda text: bool(re.compile(r"#\w+[\w'-]*\w+").match(text))
+        hashtag_flag = lambda text: bool(re.compile(r"#\w+[\w'-]*\w+").fullmatch(text))
         HASHTAG = self.nlp.vocab.add_flag(hashtag_flag)
 
-        doublequote_flag = lambda text: bool(re.compile(r'^".*"$').match(text))
+        doublequote_flag = lambda text: bool(re.compile(r'^".*"$').fullmatch(text))
         DOUBLEQUOTE = self.nlp.vocab.add_flag(doublequote_flag)
 
         stopword_flag = lambda text: bool((text.lower() in self._stopwords) & (text.lower() not in self.keepwords))
         STOPWORD = self.nlp.vocab.add_flag(stopword_flag)
 
-        break_flag = lambda text: bool(re.compile(r"[\r\n]+").match(text))
+        break_flag = lambda text: bool(re.compile(r"[\r\n]+").fullmatch(text))
         BREAK = self.nlp.vocab.add_flag(break_flag)
 
         self.merging_matcher.add('HASHTAG', None, [{'ORTH': '#'}, {'IS_ASCII': True}])
@@ -215,8 +225,13 @@ class SpacyTokenizer(object):
             self._replacements['REDDIT_USERNAME'] = self.reddit_usernames
 
         if isinstance(self.urls, str):
-            self.matcher.add('URL', self._replace_token, [{'LIKE_URL': True}])
-            self._replacements['URL'] = self.urls
+            if self.urls == 'domain':
+                self.matcher.add('URL', self._extract_domain, [{'LIKE_URL': True}])
+            elif self.urls == 'domain_unwrap':
+                self.matcher.add('URL', self._unwrap_domain, [{'LIKE_URL': True}])
+            else:
+                self.matcher.add('URL', self._replace_token, [{'LIKE_URL': True}])
+                self._replacements['URL'] = self.urls
 
         if isinstance(self.numbers, str):
             self.matcher.add('NUMBER', self._replace_token, [{NUMBER: True}])
@@ -292,6 +307,19 @@ class SpacyTokenizer(object):
         span = doc[start:end]
         for tok in span:
             tok._.transformed_text = normalize_re.sub(r"\1"*self.normalize, tok._.transformed_text)
+
+    def _extract_domain(self, matcher, doc, i, matches):
+        match_id, start, end = matches[i]
+        span = doc[start:end]
+        for tok in span:
+            tok._.transformed_text = tldextract.extract(urls_re.findall(tok.text)[0]).domain + '_domain'
+
+    def _unwrap_domain(self, matcher, doc, i, matches):
+        match_id, start, end = matches[i]
+        span = doc[start:end]
+        for tok in span:
+            unwrapped_url = requests.get(urls_re.findall(tok.text)[0]).url
+            tok._.transformed_text = tldextract.extract(unwrapped_url).domain + '_domain'
 
     def _replace_token(self, matcher, doc, i, matches):
         match_id, start, end = matches[i]

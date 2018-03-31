@@ -27,6 +27,8 @@ story_of_my_life = """
 	I'm also on Reddit as u/crazyfrogspb. I especially love /r/machinelearning
 	Sending my love to you. As they say - "stay safe"! ❤ 24
 	"""
+url_text = "I always go to http://rt.com to chat about politics, http://forums.news.cnn.com/ sucks man"
+short_url_text = "JOBS, JOBS, JOBS! Unemployment claims have fallen to a 45-year low. https://t.co/pN2TE5HDQm"
 
 def test_emoji():
 	tokenizer = SpacyTokenizer(pos_emojis=True, neg_emojis=True, neutral_emojis=True)
@@ -138,3 +140,13 @@ def test_batch_tokenizing():
 	tokenizer = SpacyTokenizer(decontract=True)
 	all_tokens = tokenizer.tokenize_docs(documents, batch_size=2, n_threads=2)
 	assert len(all_tokens) == len(documents)
+
+def test_url_tokenizing():
+	tokenizer = SpacyTokenizer(urls='domain')
+	tokens = tokenizer.tokenize(url_text)
+	assert tokens == ['I', 'always', 'go', 'to', 'rt_domain', 'to', 'chat', 'about', 'politics', 'cnn_domain', 'sucks', 'man']
+
+def test_url_unwrapping():
+	tokenizer = SpacyTokenizer(urls='domain_unwrap')
+	tokens = tokenizer.tokenize(short_url_text)
+	assert tokens == ['JOBS', 'JOBS', 'JOBS', 'unemployment', 'claims', 'have', 'fallen', 'to', 'a', '45-year', 'low', 'bloomberg_domain']
