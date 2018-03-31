@@ -29,6 +29,7 @@ story_of_my_life = """
 	"""
 url_text = "I always go to http://rt.com to chat about politics, http://forums.news.cnn.com/ sucks man"
 short_url_text = "JOBS, JOBS, JOBS! Unemployment claims have fallen to a 45-year low. https://t.co/pN2TE5HDQm"
+untokenized_text = "Rats are actually more polite in New York City than in Los Angeles"
 
 def test_emoji():
 	tokenizer = SpacyTokenizer(pos_emojis=True, neg_emojis=True, neutral_emojis=True)
@@ -150,3 +151,8 @@ def test_url_unwrapping():
 	tokenizer = SpacyTokenizer(urls='domain_unwrap')
 	tokens = tokenizer.tokenize(short_url_text)
 	assert tokens == ['JOBS', 'JOBS', 'JOBS', 'unemployment', 'claims', 'have', 'fallen', 'to', 'a', '45-year', 'low', 'bloomberg_domain']
+
+def test_keep_untokenized():
+	tokenizer = SpacyTokenizer(keep_untokenized=['New York City', 'Los Angeles'])
+	tokens = tokenizer.tokenize(untokenized_text)
+	assert tokens == ['rats', 'are', 'actually', 'more', 'polite', 'in', 'new york city', 'than', 'in', 'los angeles']

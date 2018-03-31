@@ -9,6 +9,7 @@ from spacy.tokens import Token, Span, Doc
 from spacy.tokenizer import Tokenizer
 import tldextract
 import requests
+import warnings
 import re, sys, os, string
 from math import log
 from spacy.pipeline import Pipe
@@ -113,6 +114,10 @@ class SpacyTokenizer(object):
                 re_pattern (_sre.SRE_Pattern): compiled re pattern
                 replacement_token (str): replacement token
 
+        keep_untokenized: None or list, deafault: None
+            List of expressions to keep untokenized
+            Example: ["New York", "Los Angeles", "San Francisco"] 
+
         language: str, deafult: 'english'
             Main language of the documents
 
@@ -127,7 +132,7 @@ class SpacyTokenizer(object):
                                     keepwords=None, stem=False, removepunct=True, removebreaks=True,
                                     remove_nonunicode=False, decontract=False,  splithashtags=False, twitter_handles='TOKENTWITTERHANDLE', 
                                     urls='TOKENURL', hashtags='TOKENHASHTAG', numbers='TOKENNUMBER', subreddits='TOKENSUBREDDIT', 
-                                    reddit_usernames='TOKENREDDITOR', emails='TOKENEMAIL', extra_patterns=None, 
+                                    reddit_usernames='TOKENREDDITOR', emails='TOKENEMAIL', extra_patterns=None, keep_untokenized=None,
                                     pos_emojis=None, neg_emojis=None, neutral_emojis=None)
 
         self.nlp = English()
@@ -136,6 +141,10 @@ class SpacyTokenizer(object):
         self.matcher = Matcher(self.nlp.vocab)
         for (prop, default) in self._default_values.items():
             setattr(self, prop, kwargs.get(prop, default))
+
+        unused_args = set(kwargs.keys()) - set(self._default_values.keys())
+        if len(unused_args) > 0:
+            warnings.warn("Arguments {} are not used by tokenizer".format(str(unused_args)[1:-1]))
 
         self._replacements = {}
 
@@ -191,6 +200,14 @@ class SpacyTokenizer(object):
         self.merging_matcher.add('HASHTAG', None, [{'ORTH': '#'}, {'IS_ASCII': True}])
         self.merging_matcher.add('SUBREDDIT', None, [{'ORTH': '/r'}, {'ORTH': '/'}, {'IS_ASCII': True}])
         self.merging_matcher.add('REDDIT_USERNAME', None, [{'ORTH': 'u'}, {'ORTH': '/'}, {'IS_ASCII': True}])
+
+        if self.keep_untokenized is not None:
+            for i, phrase in enumerate(self.keep_untokenized):
+                phrase_tokens = phrase.split(' ')
+                rule = []
+                for token in phrase_tokens:
+                    rule.append({'ORTH': token})
+                self.merging_matcher.add('RULE_' + str(i), None, rule)
 
         if self.ignorequotes:
             self.merging_matcher.add('QUOTE', None, [{'ORTH': '"'}, {'OP': '*', 'IS_ASCII': True}, {'ORTH': '"'}])
