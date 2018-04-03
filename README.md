@@ -8,17 +8,13 @@ Includes:
 
 Example:
 
-	from redditscore.SpacyTokenizer import SpacyTokenizer
+	from redditscore.CrazyTokenizer import CrazyTokenizer
 	trump_rant = "@realDonaldTrump #fucktrump WHO ELECTED this Guy?! 😭'"
-	tokenizer = SpacyTokenizer(removepunct=True, ignorequotes=True, ignorestopwords=True, splithashtags=True, neg_emojis=True, hashtags=False)
+	tokenizer = CrazyTokenizer(removepunct=True, ignorequotes=True, ignorestopwords=True, splithashtags=True, neg_emojis=True, hashtags=False)
 	tokenizer.tokenize_doc(trump_rant)
 
 	Output:
 	['TOKENTWITTERHANDLE', 'fuck', 'trump', 'WHO', 'ELECTED', 'guy', 'NEG_EMOJI']
-	
-To run rests execute the following command from the root directory:
-	
-	py.test -vv
 	
 To install package:
 
