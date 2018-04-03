@@ -8,7 +8,7 @@ Includes:
 
 Example:
 
-	from redditscore.CrazyTokenizer import CrazyTokenizer
+	from redditscore.tokenizer import CrazyTokenizer
 	trump_rant = "@realDonaldTrump #fucktrump WHO ELECTED this Guy?! 😭'"
 	tokenizer = CrazyTokenizer(removepunct=True, ignorequotes=True, ignorestopwords=True, splithashtags=True, neg_emojis=True, hashtags=False)
 	tokenizer.tokenize_doc(trump_rant)
