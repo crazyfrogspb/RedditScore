@@ -34,6 +34,24 @@ Comparison with other popular tokenizers:
     SpaCy Tokenizer: ['@realDonaldTrump', 'WHO', 'ELECTED', 'this', 'Guy', '?', '!', '#', 'fucktrump', 'https://goo.gl/mUTaKX'],
     NLTK TweetTokenizer: ['@realDonaldTrump', 'WHO', 'ELECTED', 'this', 'Guy', '?', '!', '#fucktrump', 'https://goo.gl/mUTaKX'],
     CrazyTokenizer: ['TOKENTWITTERHANDLE', 'WHO', 'ELECTED', 'this', 'guy', 'fuck', 'trump', 'cnn_domain']
+
+Model usage:
+
+    import pandas as pd
+    import os 
+    from redditscore.tokenizer import CrazyTokenizer
+    import pandas as pd
+    from redditscore.model import BayesModel
+
+    df = pd.read_csv(os.path.join('redditscore', 'data', 'reddit_small_sample.csv'))
+    tokenizer = CrazyTokenizer(urls='domain')
+    df['tokens'] = df['body'].apply(tokenizer.tokenize)
+
+    model = BayesModel(multi_model=True, alpha=1.0e-10, random_state=24, tfidf=True, ngram_range=(1,1))
+    X = df['tokens']
+    y = df['subgroup']
+    model.tune_params(X, y, cv=5)
+
 	
 To install package:
 
