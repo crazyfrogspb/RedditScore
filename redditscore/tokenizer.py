@@ -7,6 +7,7 @@ import re
 import sys
 import os
 import string
+import warnings
 from math import log
 from spacy.lang.en import English
 from spacy.matcher import Matcher
@@ -111,7 +112,7 @@ class CrazyTokenizer(object):
             Whether to perform decontraction of the common contractions
             Example: "'ll" -> " will"
 
-        splithashtags: bool, deafult: False
+        splithashtags: bool, deafult: True
             Whether to perform hashtag splitting
             Example: "#vladimirputinisthebest" -> "vladimir putin is the best"
 
@@ -122,7 +123,7 @@ class CrazyTokenizer(object):
                 str: replacement token
                 '': special case of the replacement token, removes all occurrences
 
-        urls: None or str
+        urls: None or str, default: 'domain_unwrap'
             Replacement of parsed URLs
                 None: do not perform
                 str: replacement token
@@ -334,15 +335,23 @@ class CrazyTokenizer(object):
         __, start, end = matches[i]
         span = doc[start:end]
         for tok in span:
-            tok._.transformed_text = tldextract.extract(URLS_RE.findall(tok.text)[0]).domain + '_domain'
+            found_urls = URLS_RE.findall(tok.text)
+            if found_urls:
+                tok._.transformed_text = tldextract.extract(found_urls[0]).domain + '_domain'
 
     @staticmethod
     def _unwrap_domain(__, doc, i, matches):
         __, start, end = matches[i]
         span = doc[start:end]
         for tok in span:
-            unwrapped_url = requests.get(URLS_RE.findall(tok.text)[0]).url
-            tok._.transformed_text = tldextract.extract(unwrapped_url).domain + '_domain'
+            found_urls = URLS_RE.findall(tok.text)
+            if found_urls:
+                try:
+                    unwrapped_url = requests.get(found_urls[0]).url
+                    tok._.transformed_text = tldextract.extract(unwrapped_url).domain + '_domain'
+                except requests.exceptions.ConnectionError:
+                    warnings.warn('Unable to connect to {}. Replacing URL with original domain'.format(found_urls[0]))
+                    tok._.transformed_text = tldextract.extract(found_urls[0]).domain + '_domain'
 
     def _replace_token(self, __, doc, i, matches):
         match_id, start, end = matches[i]
