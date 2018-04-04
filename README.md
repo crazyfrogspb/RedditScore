@@ -49,5 +49,5 @@ To cite:
       publisher = {GitHub},
       journal = {GitHub repository},
       howpublished = {\url{https://github.com/crazyfrogspb/RedditScore}},
-      commit = {to_do}
+      commit = {faf15eaed7cb334dfd7213195bbbb68861767d6a}
     }
