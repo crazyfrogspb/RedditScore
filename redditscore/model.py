@@ -164,21 +164,27 @@ class RedditModel(metaclass=ABCMeta):
             with open(file) as f:
                 param_grid = json.load(f)[self.model_name_]
 
-        items = sorted(param_grid.items())
-        keys, values = zip(*items)
         best_pars = None
         best_value = -1000000.0
-        for v in product(*values):
-            params = dict(zip(keys, v))
-            self.set_params(**params)
-            if verbose:
-                print('Now fitting model for {}'.format(params))
-            score = np.mean(self.cv_score(X, y, cv, scoring))
-            if verbose:
-                print('{}: {}'.format(scoring, score))
-            if score > best_value:
-                best_pars = params
-                best_value = score
+
+        if not isinstance(param_grid, list):
+            param_grid = [param_grid]
+
+        for param_combination in param_grid:
+            items = sorted(param_combination.items())
+            keys, values = zip(*items)
+            
+            for v in product(*values):
+                params = dict(zip(keys, v))
+                self.set_params(**params)
+                if verbose:
+                    print('Now fitting model for {}'.format(params))
+                score = np.mean(self.cv_score(X, y, cv, scoring))
+                if verbose:
+                    print('{}: {}'.format(scoring, score))
+                if score > best_value:
+                    best_pars = params
+                    best_value = score
         if verbose:
             print('Best {}: {} for {}'.format(scoring, best_value, best_pars))
         return best_pars, best_value

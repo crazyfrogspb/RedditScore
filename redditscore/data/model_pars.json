@@ -1,1 +1,14 @@
-{"BayesModel": {"alpha": [1e-10, 0.1, 0.25, 0.5, 1.0, 1.5, 5.0], "tfidf": [false, true], "multi_model": [false, true], "fit_prior": [false, true]}}
+{   "BayesModel": [
+            {"alpha": [1e-10, 1e-5, 1e-3, 1e-2, 0.1, 0.15, 0.25, 0.5, 1.0, 2.0], 
+             "tfidf": [false], 
+             "multi_model": [false], 
+             "fit_prior": [false, true]},
+
+            {"alpha": [1e-10, 1e-5, 1e-3, 1e-2, 0.1, 0.15, 0.25, 0.5, 1.0, 2.0], 
+             "tfidf": [false, true], 
+             "multi_model": [true], 
+             "fit_prior": [false, true]}
+    ],
+
+    "SVM": {"C": [1.0]}
+}
