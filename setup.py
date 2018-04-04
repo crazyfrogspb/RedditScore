@@ -11,7 +11,8 @@ try:
 except:
     readme = 'Package for performing Reddit-based text analysis'
 	
-INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.10", "tldextract>=2.1.0", "requests>=2.18.4", "nltk>=3.2.5"]
+INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.10", "tldextract>=2.1.0", "requests>=2.18.4", "nltk>=3.2.5", "sklearn>=0.19",
+                    "pandas>=0.22.0", "keras>=2.1.4", "numpy>=1.14.2"]
 
 with open('LICENSE') as f:
     license = f.read()
