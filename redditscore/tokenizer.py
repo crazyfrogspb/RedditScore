@@ -54,20 +54,17 @@ def true_or_empty(arg):
 
 
 class CrazyTokenizer(object):
-    # pylint: disable=too-many-instance-attributes
-    """
-    SpaCy-based tokenizer with many useful Twitter- and Reddit-specific features
-    """
-
     def __init__(self, lowercase=True, keepcaps=True, normalize=3, ignorequotes=False,
                  ignorestopwords=False, keepwords=None, stem=False, removepunct=True,
                  removebreaks=True, remove_nonunicode=False, decontract=False,
-                 splithashtags=False, twitter_handles='TOKENTWITTERHANDLE',
-                 urls='TOKENURL', hashtags='TOKENHASHTAG', numbers='TOKENNUMBER',
+                 splithashtags=True, twitter_handles='TOKENTWITTERHANDLE',
+                 urls='domain_unwrap', hashtags=False, numbers='TOKENNUMBER',
                  subreddits='TOKENSUBREDDIT', reddit_usernames='TOKENREDDITOR',
                  emails='TOKENEMAIL', extra_patterns=None, keep_untokenized=None,
                  pos_emojis=None, neg_emojis=None, neutral_emojis=None):
         """
+        Initialize CrazyTokenizer object
+
         Parameters
         ----------
         lowercase : bool, default: True
@@ -484,6 +481,7 @@ class CrazyTokenizer(object):
     def tokenize(self, text):
         """
         Tokenize document
+
         Parameters
         ----------
         text: str
@@ -496,6 +494,7 @@ class CrazyTokenizer(object):
     def tokenize_docs(self, texts, batch_size=10000, n_threads=1):
         """
         Tokenize documents in batches
+
         Parameters
         ----------
         texts: iterable

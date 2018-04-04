@@ -19,3 +19,14 @@ Example:
 To install package:
 
 	pip install git+https://github.com/crazyfrogspb/RedditScore.git
+
+To cite:
+    @misc{Nikitin2018,
+  author = {Nikitin, E.},
+  title = {RedditScore},
+  year = {2018},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/crazyfrogspb/RedditScore}},
+  commit = {to_do}
+}

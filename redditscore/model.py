@@ -66,7 +66,7 @@ class RedditModel(object):
         if body_col in self.df.columns:
             self.body_col = body_col
         else:
-            raise ValueError('Column {} is not in the dataframe'.format{body_col})
+            raise ValueError('Column {} is not in the dataframe'.format(body_col))
 
         if subreddit_col in self.df.columns:
             self.subreddit_col = subreddit_col
@@ -75,7 +75,7 @@ class RedditModel(object):
 
         if val_type not in [None, 'holdout', 'cv']:
             raise ValueError("val_type should be either None, 'holdout', or 'cv'")
-        elif val_type = 'cv':
+        elif val_type == 'cv':
             self.cv_split = check_cv(cv, y=self.df[self.subreddit_col], classifier=True)
         elif val_type == 'holdout':
             self.cv_split = None
