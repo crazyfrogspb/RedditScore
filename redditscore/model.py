@@ -80,7 +80,7 @@ class RedditModel(metaclass=ABCMeta):
         np.random.seed(random_state)
 
         self.model_ = None
-        self.model_name_ = None
+        self.model_type= None
         self.cv_split_ = None
         self.params = None
 
@@ -162,7 +162,7 @@ class RedditModel(metaclass=ABCMeta):
             file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 os.path.join('data', 'model_pars.json'))
             with open(file) as f:
-                param_grid = json.load(f)[self.model_name_]
+                param_grid = json.load(f)[self.model_type]
 
         best_pars = None
         best_value = -1000000.0
@@ -255,9 +255,9 @@ class RedditModel(metaclass=ABCMeta):
         pass
 
 
-class BayesModel(RedditModel):
-    def __init__(self, multi_model=True, alpha=1.0, fit_prior=True, class_prior=None,
-                 ngram_range=(1, 1), tfidf=True, **kwargs):
+class SklearnModel(RedditModel):
+    def __init__(self, model_type='multinomial', alpha=1.0, fit_prior=True, class_prior=None,
+                 ngram_range=(1, 1), tfidf=True, C=1.0, kernel='linear', probability=True, **kwargs):
         """
         Naive Bayes classifier for multinomial and Bernoulli models with or without tf-idf re-weighting
 
@@ -282,22 +282,32 @@ class BayesModel(RedditModel):
             Whether to use tf-idf re-weighting
         """
         super().__init__(**kwargs)
-        self.params = {'alpha': alpha, 'fit_prior': fit_prior, 'class_prior': class_prior, 'ngram_range': ngram_range,
-                       'tfidf': tfidf, 'multi_model': multi_model}
+        if model_type in ['multinomial', 'bernoulli']:
+            self.params = {'alpha': alpha, 'fit_prior': fit_prior, 'class_prior': class_prior, 'ngram_range': ngram_range,
+                           'tfidf': tfidf}
+        elif model_type == 'svm':
+            self.params = {'C': C, 'kernel': kernel, 'probability': probability, 'ngram_range': ngram_range, 'tfidf': tfidf}
+        else:
+            raise ValueError('{} is not supported yet'.format(model_type))
+
+        self.model_type = model_type
         self.set_params(**self.params)
-        self.model_name_ = 'BayesModel'
+        
 
     def set_params(self, **params):
         """
         Set the parameters of the model.
         """
         self.params.update(params)
-        if self.params['multi_model']:
+        if self.model_type == 'multinomial':
             model = MultinomialNB(alpha=self.params['alpha'],
                                   fit_prior=self.params['fit_prior'], class_prior=self.params['class_prior'])
-        else:
+        elif self.model_type == 'bernoulli':
             model = BernoulliNB(alpha=self.params['alpha'],
                                 fit_prior=self.params['fit_prior'], class_prior=self.params['class_prior'])
+        elif self.model_type == 'svm':
+            model = SVC(C=self.params['C'], kernel=self.params['kernel'], probability=self.params['probability'])
+
         if self.params['tfidf']:
             vectorizer = TfidfVectorizer(analyzer=build_analyzer(self.params['ngram_range']))
         else:
@@ -306,3 +316,15 @@ class BayesModel(RedditModel):
         self.model_ = Pipeline([('vectorizer', vectorizer), ('model', model)])
 
         return self
+
+class FasttextModel(RedditModel):
+    pass
+
+class MLPModel(RedditModel):
+    pass
+
+class CNNModel(RedditModel):
+    pass
+
+class LSTMModel(RedditModel):
+    pass
