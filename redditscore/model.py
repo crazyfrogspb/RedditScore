@@ -327,4 +327,5 @@ class CNNModel(RedditModel):
     pass
 
 class LSTMModel(RedditModel):
+    x = 5
     pass
