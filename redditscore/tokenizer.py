@@ -203,6 +203,7 @@ class CrazyTokenizer(object):
         self._merging_matcher = Matcher(self._nlp.vocab)
         self._matcher = Matcher(self._nlp.vocab)
         self._replacements = {}
+        self._domains = {}
         self.params = locals()
 
         self._merging_matcher.add(
@@ -428,35 +429,41 @@ class CrazyTokenizer(object):
                 tok._.transformed_text = tldextract.extract(
                     found_urls[0]).domain + '_domain'
 
-    @staticmethod
-    def _unwrap_domain_fast(__, doc, i, matches):
+    def _unwrap_domain_fast(self, __, doc, i, matches):
         # Extract domain after unwrapping specific URL shortners
         __, start, end = matches[i]
         span = doc[start:end]
         for tok in span:
             found_urls = URLS_RE.findall(tok.text)
             if found_urls:
-                tok._.transformed_text = unshorten_url(
-                    found_urls[0], URL_SHORTENERS) + '_domain'
+                if found_urls[0] in self._domains:
+                    tok._.transformed_text = self._domains[found_urls[0]] + '_domain'
+                else:
+                    domain = unshorten_url(found_urls[0], URL_SHORTENERS)
+                    self._domains[found_urls[0]] = domain
+                    tok._.transformed_text = domain + '_domain'
 
-    @staticmethod
-    def _unwrap_domain(__, doc, i, matches):
+    def _unwrap_domain(self, __, doc, i, matches):
         # Extract domain after unwrapping all URLs
         __, start, end = matches[i]
         span = doc[start:end]
         for tok in span:
             found_urls = URLS_RE.findall(tok.text)
             if found_urls:
-                try:
-                    unwrapped_url = requests.head(
-                        found_urls[0], allow_redirects=True).url
-                    tok._.transformed_text = tldextract.extract(
-                        unwrapped_url).domain + '_domain'
-                except requests.exceptions.ConnectionError:
-                    warnings.warn(
-                        'Unable to connect to {}. Replacing URL with original domain'.format(found_urls[0]))
-                    tok._.transformed_text = tldextract.extract(
-                        found_urls[0]).domain + '_domain'
+                if found_urls[0] in self._domains:
+                    tok._.transformed_text = self._domains[found_urls[0]] + '_domain'
+                else:
+                    try:
+                        unwrapped_url = requests.head(
+                            found_urls[0], allow_redirects=True).url
+                        domain = tldextract.extract(unwrapped_url).domain
+                        self._domains[found_urls[0]] = domain
+                        tok._.transformed_text = domain + '_domain'
+                    except requests.exceptions.ConnectionError:
+                        warnings.warn(
+                            'Unable to connect to {}. Replacing URL with original domain'.format(found_urls[0]))
+                        tok._.transformed_text = tldextract.extract(
+                            found_urls[0]).domain + '_domain'
 
     def _replace_token(self, __, doc, i, matches):
         # Replace tokens with something else
