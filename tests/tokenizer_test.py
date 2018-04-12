@@ -192,7 +192,16 @@ def test_url_unwrapping():
     tokenizer = CrazyTokenizer(urls='domain_unwrap')
     tokens = tokenizer.tokenize(short_url_text)
     assert tokens == ['JOBS', 'JOBS', 'JOBS', 'unemployment', 'claims',
-                      'have', 'fallen', 'to', 'a', '45-year', 'low', 'bloomberg_domain']
+                      'have', 'fallen', 'to', 'a', '45-year',
+                      'low', 'bloomberg_domain']
+
+
+def test_url_fast_unwrapping():
+    tokenizer = CrazyTokenizer(urls='domain_unwrap_fast')
+    tokens = tokenizer.tokenize(short_url_text)
+    assert tokens == ['JOBS', 'JOBS', 'JOBS', 'unemployment', 'claims',
+                      'have', 'fallen', 'to', 'a', '45-year',
+                      'low', 'bloomberg_domain']
 
 
 def test_keep_untokenized():
