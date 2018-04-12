@@ -44,7 +44,7 @@ To install package:
 
 To perform complete installation with all features:
 
-  pip install git+https://github.com/crazyfrogspb/RedditScore.git#egg=redditscore[nltk,neural_nets,fasttext]
+	pip install git+https://github.com/crazyfrogspb/RedditScore.git#egg=redditscore[nltk,neural_nets,fasttext]
 
 To cite:
 
@@ -56,5 +56,5 @@ To cite:
       publisher = {GitHub},
       journal = {GitHub repository},
       howpublished = {\url{https://github.com/crazyfrogspb/RedditScore}},
-      commit = {faf15eaed7cb334dfd7213195bbbb68861767d6a}
+      commit = {d431104daddf5b968aa8b835c5af906b7049d2db}
     }
