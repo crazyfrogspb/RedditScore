@@ -110,16 +110,19 @@ class CrazyTokenizer(object):
 
     ignorestopwords: str, list, or False, optional
         Whether to ignore stopwords
-            str: language to get a list of stopwords for from NLTK package
-            list: list of stopwords to remove
-            False: keep all tokens
+
+        - str: language to get a list of stopwords for from NLTK package
+        - list: list of stopwords to remove
+        - False: keep all tokens
+
         Defaults to False
 
     stem: {False, 'stem', 'lemm'}, optional
         Whether to perform word stemming
-            False: do not perform word stemming
-            'stem': use PorterStemmer from NLTK package
-            'lemm': use WordNetLemmatizer from NLTK package
+
+        - False: do not perform word stemming
+        - 'stem': use PorterStemmer from NLTK package
+        - 'lemm': use WordNetLemmatizer from NLTK package
 
     removepunct: bool, optional
         If True, remove punctuation tokens. Defaults to True.
@@ -139,27 +142,32 @@ class CrazyTokenizer(object):
     twitter_handles, hashtags, numbers, subreddits, reddit_usernames, emails:
     False or str, optional
         Replacement of the different types of tokens
-            False: leaves these tokens intact
-            str: replacement token
-            '': removes all occurrences of these tokens
+
+        - False: leaves these tokens intact
+        - str: replacement token
+        - '': removes all occurrences of these tokens
 
     urls: False or str, optional
         Replacement of parsed URLs
-            False: leave URL intact
-            str: replacement token
-            '': removes all occurrences of these tokens
-            'domain': extract domain ("http://cnn.com" -> "cnn_domain")
-            'domain_unwrap_fast': extract domain after unwraping links
-                for a list of URL shorteners (goo.gl, t.co, bit.ly, tinyurl.com)
-            'domain_unwrap': extract domain after unwraping all links
+
+        - False: leave URL intact
+        - str: replacement token
+        - '': removes all occurrences of these tokens
+        - 'domain': extract domain ("http://cnn.com" -> "cnn_domain")
+        - 'domain_unwrap_fast': extract domain after unwraping links
+            for a list of URL shorteners (goo.gl, t.co, bit.ly, tinyurl.com)
+        - 'domain_unwrap': extract domain after unwraping all links
+
         Defaults to 'domain'.
 
     extra_patterns: None or list of tuples, optional
         Replacement of any user-supplied extra patterns.
         Tuples must have the following form: (name, re_pattern, replacement_token):
-            name (str): name of the pattern
-            re_pattern (_sre.SRE_Pattern): compiled re pattern
-            replacement_token (str): replacement token
+
+        - name (str): name of the pattern
+        - re_pattern (_sre.SRE_Pattern): compiled re pattern
+        - replacement_token (str): replacement token
+
         Defaults to None
 
     keep_untokenized: None or list, optional
@@ -175,9 +183,10 @@ class CrazyTokenizer(object):
 
     pos_emojis, neg_emojis, neutral_emojis: None, True, or list, optional
         Replace positive, negative, and neutral emojis with the special tokens
-            None: do not perform replacement
-            True: perform replacement of the default lists of emojis
-            list: list of emojis to replace
+
+        - None: do not perform replacement
+        - True: perform replacement of the default lists of emojis
+        - list: list of emojis to replace
     """
 
     def __init__(self, lowercase=True, keepcaps=True, normalize=3,

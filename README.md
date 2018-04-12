@@ -39,9 +39,11 @@ Model usage:
 
 
 To install package:
+
 	pip install git+https://github.com/crazyfrogspb/RedditScore.git
 
 To perform complete installation with all features:
+
   pip install git+https://github.com/crazyfrogspb/RedditScore.git#egg=project[nltk, neural_nets, fasttext]
 
 To cite:
