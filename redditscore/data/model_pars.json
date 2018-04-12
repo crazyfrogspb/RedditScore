@@ -12,5 +12,7 @@
 
     "SVM": {"C": [1e-5, 1e-3, 1e-1, 1.0],
             "kernel": ["linear"],
-            "ngram_range": [1, 2, 3]}
+            "ngram_range": [1, 2, 3]},
+
+    "fasttext": {"loss": ["softmax", "ns", "hs"]}
 }
