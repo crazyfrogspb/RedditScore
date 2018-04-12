@@ -146,6 +146,7 @@ class CrazyTokenizer(object):
         If True, split hashtags according to word frequency.
         Example: "#vladimirputinisthebest" -> "vladimir putin is the best"
         Defaults to False.
+        Note: it will not do anything if "hashtags" argument is not False
 
     twitter_handles, hashtags, numbers, subreddits, reddit_usernames, emails:
     False or str, optional
