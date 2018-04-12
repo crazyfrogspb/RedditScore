@@ -44,15 +44,23 @@ NEUTRAL_EMOJIS = [u'🙏']
 NORMALIZE_RE = re.compile(r"([a-zA-Z])\1\1+")
 URLS_RE = re.compile(
     r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+EMAIL_LAST_PART = re.compile(r"[^@]+\.[^@]+")
+ALPHA_DIGITS = re.compile(r"[a-zA-Z0-9_]+")
 
-PREFIX_RE = re.compile(r'''^[\[\("'\s]''')
-SUFFIX_RE = re.compile(r'''[\]\)"'?!.\s,:;-]$''')
 
 PREFIX_RE = re.compile(r'''^[\[\("'?!.,:;*\-]''')
 SUFFIX_RE = re.compile(r'''[ \] \)"'?!.,:;*\-]$''')
-INFIX_RE = re.compile(r'''([.]{3,}|[\]\)\[\("?!,;])''')
+INFIX_RE = re.compile(r'''([.]{3,}|[\]\)\[\("?!,;@])''')
 
 URL_SHORTENERS = ['t', 'bit', 'goo', 'tinyurl']
+
+
+def email_last_part_check(text):
+    return bool(EMAIL_LAST_PART.fullmatch(text))
+
+
+def alpha_digits_check(text):
+    return bool(ALPHA_DIGITS.fullmatch(text))
 
 
 def custom_tokenizer(nlp):
@@ -206,12 +214,22 @@ class CrazyTokenizer(object):
         self._domains = {}
         self.params = locals()
 
+        email_last_part_flag = self._nlp.vocab.add_flag(email_last_part_check)
+        alpha_digits_flag = self._nlp.vocab.add_flag(alpha_digits_check)
+
         self._merging_matcher.add(
-            'HASHTAG', None, [{'ORTH': '#'}, {'IS_ASCII': True}])
+            'HASHTAG', None, [{'ORTH': '#'}, {alpha_digits_flag: True}])
         self._merging_matcher.add(
-            'SUBREDDIT', None, [{'ORTH': '/r'}, {'ORTH': '/'}, {'IS_ASCII': True}])
+            'SUBREDDIT', None, [{'ORTH': '/r'}, {'ORTH': '/'},
+                                {alpha_digits_flag: True}])
         self._merging_matcher.add('REDDIT_USERNAME', None, [
-            {'ORTH': 'u'}, {'ORTH': '/'}, {'IS_ASCII': True}])
+            {'ORTH': 'u'}, {'ORTH': '/'}, {alpha_digits_flag: True}])
+
+        self._merging_matcher.add('EMAIL', None, [{alpha_digits_flag: True}, {
+                                  'ORTH': '@'}, {email_last_part_flag: True}])
+
+        self._merging_matcher.add(
+            'TWITTER_HANDLE', None, [{'ORTH': '@'}, {alpha_digits_flag: True}])
 
         if isinstance(ignorestopwords, str) and ('nltk' in sys.modules):
             try:
@@ -273,6 +291,11 @@ class CrazyTokenizer(object):
                                   [{'LIKE_URL': True}])
                 self._replacements['URL'] = urls
 
+        if emails is not False:
+            self._matcher.add('EMAIL', self._replace_token,
+                              [{'LIKE_EMAIL': True}])
+            self._replacements['EMAIL'] = emails
+
         if twitter_handles is not False:
             def twitter_handle_check(text): return bool(
                 re.compile(r"@\w{1,15}").fullmatch(text))
@@ -311,11 +334,6 @@ class CrazyTokenizer(object):
                 self._wordcost = dict((k, log((i + 1) * log(len(self._words))))
                                       for i, k in enumerate(self._words))
                 self._maxword = max(len(x) for x in self._words)
-
-        if emails is not False:
-            self._matcher.add('EMAIL', self._replace_token,
-                              [{'LIKE_EMAIL': True}])
-            self._replacements['EMAIL'] = emails
 
         if ignorequotes:
             self._merging_matcher.add('QUOTE', None, [{'ORTH': '"'}, {
@@ -623,7 +641,7 @@ class CrazyTokenizer(object):
         doc = self._nlp(text)
         return doc._.tokens
 
-    def tokenize_docs(self, texts, batch_size=10000, n_threads=2):
+    def tokenize_docs(self, texts, batch_size=1000, n_threads=-1):
         """
         Tokenize documents in batches
 
