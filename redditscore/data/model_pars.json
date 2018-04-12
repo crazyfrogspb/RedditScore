@@ -1,14 +1,16 @@
 {   "multinomial":
-            {"alpha": [1e-10, 1e-5, 1e-3, 1e-2, 0.1, 0.15, 0.25, 0.5, 1.0, 2.0], 
-             "tfidf": [false], 
-             "fit_prior": [false, true]},
+            {"alpha": [1e-10, 1e-5, 1e-3, 1e-2, 0.1, 0.15, 0.25, 0.5, 1.0, 2.0],
+             "tfidf": [false],
+             "fit_prior": [false, true],
+             "ngram_range": [(1,1), (1,2)]},
 
-    "bernoulli":        
-            {"alpha": [1e-10, 1e-5, 1e-3, 1e-2, 0.1, 0.15, 0.25, 0.5, 1.0, 2.0], 
-             "tfidf": [false, true], 
-             "multi_model": [true], 
-             "fit_prior": [false, true]}
+    "bernoulli":
+            {"alpha": [1e-10, 1e-5, 1e-3, 1e-2, 0.1, 0.15, 0.25, 0.5, 1.0, 2.0],
+             "tfidf": [false, true],
+             "fit_prior": [false, true],
+             "ngram_range": [(1,1), (1,2)]}
     ,
     "SVM": {"C": [1e-5, 1e-3, 1e-1, 1.0],
-            "kernel": ["linear"]}
+            "kernel": ["linear"],
+            "ngram_range": [(1,1), (1,2)]}
 }
