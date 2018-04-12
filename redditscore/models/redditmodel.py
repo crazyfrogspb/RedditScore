@@ -145,7 +145,7 @@ class RedditModel(metaclass=ABCMeta):
         """
         if param_grid is None:
             file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                os.path.join('data', 'model_pars.json'))
+                                os.path.join('..', 'data', 'model_pars.json'))
             with open(file) as f:
                 param_grid = json.load(f)[self.model_type]
 

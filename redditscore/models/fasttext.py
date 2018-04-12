@@ -15,6 +15,7 @@ import tempfile
 import warnings
 
 import fastText
+import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 from . import redditmodel
@@ -70,9 +71,16 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
         self.verbose = verbose
 
         self._model = None
+        self._num_classes = None
 
     def fit(self, X, y):
+        if not isinstance(X, np.ndarray):
+            X = np.array(X)
+        if not isinstance(y, np.ndarray):
+            y = np.array(y)
+
         path = data_to_temp(X, self.label, y)
+        self._num_classes = len(np.unique(y))
         self._model = fastText.train_supervised(path,
                                                 lr=self.lr,
                                                 dim=self.dim,
@@ -100,7 +108,7 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
         return predictions
 
     def predict_proba(self, X):
-        path = data_to_temp(X, self.label)
+        probs = [self._model.predict(doc, k=self._num_classes) for doc in X]
 
 
 class FastTextModel(redditmodel.RedditModel):
@@ -112,7 +120,6 @@ class FastTextModel(redditmodel.RedditModel):
     """
 
     def __init__(self, random_state=24, **kwargs):
-
         super().__init__(random_state=random_state)
         self.model_type = 'fasttext'
         self._model = FastTextClassifier(**kwargs)

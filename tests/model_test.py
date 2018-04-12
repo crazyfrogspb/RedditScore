@@ -31,11 +31,11 @@ y = df['subreddit']
 
 def test_model_init():
     multi_model = sklearn.SklearnModel(
-        model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngram_range=(1, 1))
+        model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngrams=1)
     bernoulli_model = sklearn.SklearnModel(
-        model_type='bernoulli', alpha=0.1, random_state=24, tfidf=False, ngram_range=(1, 1))
+        model_type='bernoulli', alpha=0.1, random_state=24, tfidf=False, ngrams=1)
     svm_model = sklearn.SklearnModel(model_type='svm', C=0.1,
-                                     random_state=24, tfidf=False, ngram_range=(1, 1))
+                                     random_state=24, tfidf=False, ngrams=1)
     fasttext_model = fasttext.FastTextModel(minCount=5)
 
 

@@ -18,9 +18,9 @@ from sklearn.svm import SVC
 from . import redditmodel
 
 
-def build_analyzer(ngram_range):
+def build_analyzer(ngrams):
     # Build analyzer for vectorizers for a given ngram range
-    return lambda doc: redditmodel.word_ngrams(doc, ngram_range)
+    return lambda doc: redditmodel.word_ngrams(doc, (1, ngrams))
 
 
 class SklearnModel(redditmodel.RedditModel):
@@ -37,8 +37,8 @@ class SklearnModel(redditmodel.RedditModel):
         - 'bernoulli': BernoulliNB
         - 'svm': SVC
 
-    ngram_range: tuple (min_n, max_n), optional
-        The lower and upper boundary of the range of n-values for different n-grams to be extracted
+    ngrams: int, optional
+        The upper boundary of the range of n-values for different n-grams to be extracted
 
     tfidf: bool, optional
         If true, use tf-idf re-weighting
@@ -50,10 +50,10 @@ class SklearnModel(redditmodel.RedditModel):
          Parameters of the corresponding models. For details check scikit-learn documentation.
     """
 
-    def __init__(self, model_type='multinomial', ngram_range=(1, 1), tfidf=True, random_state=24, **kwargs):
+    def __init__(self, model_type='multinomial', ngrams=1, tfidf=True, random_state=24, **kwargs):
         super().__init__(random_state=random_state)
         self.params = {}
-        self.ngram_range = ngram_range
+        self.ngrams = ngrams
         self.tfidf = tfidf
         if model_type not in ['multinomial', 'bernoulli', 'svm']:
             raise ValueError('{} is not supported yet'.format(model_type))
@@ -66,10 +66,10 @@ class SklearnModel(redditmodel.RedditModel):
 
         Parameters
         ----------
-        **params: {'tfidf', 'ngram_range', 'random_state'} or
+        **params: {'tfidf', 'ngrams', 'random_state'} or
             parameters of the corresponding models
         """
-        for key in ['tfidf', 'ngram_range', 'random_state']:
+        for key in ['tfidf', 'ngrams', 'random_state']:
             if key in params:
                 setattr(self, key, params[key])
                 params.pop(key)
@@ -84,10 +84,10 @@ class SklearnModel(redditmodel.RedditModel):
 
         if self.tfidf:
             vectorizer = TfidfVectorizer(
-                analyzer=build_analyzer(self.ngram_range))
+                analyzer=build_analyzer(self.ngrams))
         else:
             vectorizer = CountVectorizer(
-                analyzer=build_analyzer(self.ngram_range))
+                analyzer=build_analyzer(self.ngrams))
 
         self._model = Pipeline([('vectorizer', vectorizer), ('model', model)])
 
