@@ -1,0 +1,29 @@
+[[source]]
+verify_ssl = true
+url = "https://pypi.python.org/simple"
+name = "pypi"
+
+[packages]
+pandas = "*"
+nltk = "*"
+scikit-learn = "*"
+tensorflow = "*"
+tensorflow-gpu = "*"
+numpy = "*"
+spacy = "*"
+requests = "*"
+tldextract = "*"
+keras = "*"
+
+[requires]
+python_version = "3.5"
+
+[dev-packages]
+jupyter = "*"
+"flake8" = "*"
+"autopep8" = "*"
+sphinxcontrib-napoleon = "*"
+pytest = "*"
+isort = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"

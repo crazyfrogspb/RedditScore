@@ -1,0 +1,6 @@
+include LICENSE
+include README.md
+include redditscore/data/*.*
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
