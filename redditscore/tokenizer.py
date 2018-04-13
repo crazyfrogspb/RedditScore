@@ -18,10 +18,11 @@ import warnings
 from collections import OrderedDict
 from http import client
 from math import log
-from urllib import parse
+from urllib import parse, request
+from urllib.error import HTTPError, URLError
 
-import requests
 import tldextract
+from bs4 import BeautifulSoup
 from spacy.lang.en import English
 from spacy.matcher import Matcher
 from spacy.tokenizer import Tokenizer
@@ -56,7 +57,7 @@ QUOTES_RE = re.compile(r'^".*"$')
 
 PREFIX_RE = re.compile(r'''^[\[\("'?!.,:;*\-]''')
 SUFFIX_RE = re.compile(r'''[ \] \)"'?!.,:;*\-]$''')
-INFIX_RE = re.compile(r'''([.]{3,}|[\]\)\[\("?!,;@])''')
+INFIX_RE = re.compile(r'''([.]{3,}|[\]\)\[\("?!,;#@|])''')
 
 URL_SHORTENERS = ['t', 'bit', 'goo', 'tinyurl']
 
@@ -106,6 +107,16 @@ def unshorten_url(url, url_shorteners=None):
         return domain
     else:
         return tldextract.extract(url).domain
+
+
+def get_url_title(url):
+    try:
+        response = request.urlopen(url)
+    except (ValueError, HTTPError, URLError):
+        warnings.warn("Couldn't extract title from url {}".format(url))
+        return ''
+    soup = BeautifulSoup(response, "html5lib")
+    return soup.title.string
 
 
 class CrazyTokenizer(object):
@@ -182,8 +193,9 @@ class CrazyTokenizer(object):
         - 'domain_unwrap_fast': extract domain after unwraping links
         for a list of URL shorteners (goo.gl, t.co, bit.ly, tinyurl.com)
         - 'domain_unwrap': extract domain after unwraping all links
+        - 'title': extract and tokenize title of each link after unwraping it
 
-        Defaults to 'domain'.
+        Defaults to False.
 
     extra_patterns: None or list of tuples, optional
         Replacement of any user-supplied extra patterns.
@@ -218,10 +230,10 @@ class CrazyTokenizer(object):
     def __init__(self, lowercase=True, keepcaps=False, normalize=3,
                  ignorequotes=False, ignorestopwords=False, stem=False,
                  removepunct=True, removebreaks=True, decontract=False,
-                 splithashtags=False, twitter_handles='TOKENTWITTERHANDLE',
-                 urls='domain', hashtags=False, numbers='TOKENNUMBER',
-                 subreddits='TOKENSUBREDDIT', reddit_usernames='TOKENREDDITOR',
-                 emails='TOKENEMAIL', extra_patterns=None, keep_untokenized=None,
+                 splithashtags=False, twitter_handles=False,
+                 urls=False, hashtags=False, numbers=False,
+                 subreddits=False, reddit_usernames=False,
+                 emails=False, extra_patterns=None, keep_untokenized=None,
                  whitespaces_to_underscores=True, remove_nonunicode=False,
                  pos_emojis=None, neg_emojis=None, neutral_emojis=None):
         self.params = locals()
@@ -233,6 +245,7 @@ class CrazyTokenizer(object):
 
         self._replacements = {}
         self._domains = {}
+        self._titles = {}
 
         email_last_part_flag = self._nlp.vocab.add_flag(email_last_part_check)
         alpha_digits_flag = self._nlp.vocab.add_flag(alpha_digits_check)
@@ -301,12 +314,10 @@ class CrazyTokenizer(object):
             if urls == 'domain':
                 self._matcher.add('URL', self._extract_domain,
                                   [{'LIKE_URL': True}])
-            elif urls == 'domain_unwrap_fast':
-                self._matcher.add('URL', self._unwrap_domain_fast, [
+            elif urls in ['domain_unwrap_fast', 'domain_unwrap', 'title']:
+                self._urls = urls
+                self._matcher.add('URL', self._process_url, [
                     {'LIKE_URL': True}])
-            elif urls == 'domain_unwrap':
-                self._matcher.add('URL', self._unwrap_domain,
-                                  [{'LIKE_URL': True}])
             else:
                 self._matcher.add('URL', self._replace_token,
                                   [{'LIKE_URL': True}])
@@ -468,33 +479,29 @@ class CrazyTokenizer(object):
                 tok._.transformed_text = tldextract.extract(
                     found_urls[0]).domain + '_domain'
 
-    def _unwrap_domain_fast(self, __, doc, i, matches):
-        # Extract domain after unwrapping specific URL shortners
+    def _process_url(self, __, doc, i, matches):
+        # Process found URLs
         __, start, end = matches[i]
         span = doc[start:end]
         for tok in span:
             found_urls = URLS_RE.findall(tok.text)
             if found_urls:
-                if found_urls[0] in self._domains:
+                if self._urls != 'title' and found_urls[0] in self._domains:
                     tok._.transformed_text = self._domains[found_urls[0]] + '_domain'
-                else:
-                    domain = unshorten_url(found_urls[0], URL_SHORTENERS)
+                elif self._urls != 'title':
+                    if self._urls == 'domain_unwrap':
+                        domain = unshorten_url(found_urls[0])
+                    else:
+                        domain = unshorten_url(found_urls[0], URL_SHORTENERS)
                     self._domains[found_urls[0]] = domain
                     tok._.transformed_text = domain + '_domain'
-
-    def _unwrap_domain(self, __, doc, i, matches):
-        # Extract domain after unwrapping specific URL shortners
-        __, start, end = matches[i]
-        span = doc[start:end]
-        for tok in span:
-            found_urls = URLS_RE.findall(tok.text)
-            if found_urls:
-                if found_urls[0] in self._domains:
-                    tok._.transformed_text = self._domains[found_urls[0]] + '_domain'
-                else:
-                    domain = unshorten_url(found_urls[0])
-                    self._domains[found_urls[0]] = domain
-                    tok._.transformed_text = domain + '_domain'
+                elif self._urls == 'title':
+                    if found_urls[0] in self._titles:
+                        tok._.transformed_text = self._titles[found_urls[0]]
+                    else:
+                        title = self.tokenize(get_url_title(found_urls[0]))
+                        tok._.transformed_text = title
+                        self._titles = title
 
     def _replace_token(self, __, doc, i, matches):
         # Replace tokens with something else
@@ -656,6 +663,7 @@ class CrazyTokenizer(object):
         """
         texts = [self._preprocess_text(text) for text in texts]
         all_tokens = []
-        for doc in self._nlp.pipe(texts, batch_size=batch_size, n_threads=n_threads):
+        for doc in self._nlp.pipe(texts, batch_size=batch_size,
+                                  n_threads=n_threads):
             all_tokens.append(doc._.tokens)
         return all_tokens
