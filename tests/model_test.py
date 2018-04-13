@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import pytest
 from sklearn.model_selection import GridSearchCV
 
 from redditscore.models import fasttext, sklearn
@@ -39,15 +40,42 @@ def test_model_init():
     fasttext_model = fasttext.FastTextModel(minCount=5)
 
 
-def test_multimodel_tune():
+def test_multimodel():
     multi_model = sklearn.SklearnModel(model_type='multinomial')
     multi_model.tune_params(X, y, cv=0.2, scoring='neg_log_loss',
                             param_grid={'tfidf': [False, True]})
     multi_model.tune_params(X, y, cv=5, scoring='accuracy',
-                            param_grid={'tfidf': [False, True], 'alpha': [0.1, 1.0]}, refit=True)
+                            param_grid={'tfidf': [False, True],
+                                        'alpha': [0.1, 1.0]}, refit=True)
+    multi_model.predict(X)
+    multi_model.predict_proba(X)
+
+
+def test_bernoulli():
+    bernoulli_model = sklearn.SklearnModel(model_type='bernoulli')
+    bernoulli_model.tune_params(X, y, cv=0.2, scoring='neg_log_loss',
+                                param_grid={'tfidf': [False, True]})
+    bernoulli_model.tune_params(X[0:10], y[0:10], cv=0.2)
+    bernoulli_model.tune_params(X, y, cv=5, scoring='accuracy',
+                                param_grid={'tfidf': [False, True],
+                                            'alpha': [0.1, 1.0]}, refit=True)
+    bernoulli_model.predict(X)
+    bernoulli_model.predict_proba(X)
 
 
 def test_fasttext_train():
     fasttext_model = fasttext.FastTextModel(minCount=5)
     fasttext_model.fit(X, y)
     fasttext_model.predict(X)
+    fasttext_model.predict_proba(X)
+    fasttext_model.tune_params(X, y, cv=0.2, param_grid={
+                               'step0': {'epoch': [1, 2]},
+                               'step1': {'minCount': [1, 5]}})
+
+
+def test_step_exception():
+    fasttext_model = fasttext.FastTextModel(minCount=5)
+    with pytest.raises(KeyError) as e_info:
+        fasttext_model.tune_params(X, y, cv=0.2, param_grid={
+                                   'step0': {'epoch': [1, 2]},
+                                   'step2': {'minCount': [1, 5]}})

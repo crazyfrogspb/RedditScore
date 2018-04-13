@@ -88,6 +88,7 @@ class RedditModel(metaclass=ABCMeta):
         float
             Average value of the validation metrics
         """
+        self._classes = sorted(np.unique(y))
         np.random.seed(self.random_state)
         if isinstance(cv, float):
             train_ind, __ = train_test_split(np.arange(0, X.shape[0]))
@@ -104,7 +105,7 @@ class RedditModel(metaclass=ABCMeta):
                                scoring=scoring)
 
     def tune_params(self, X, y, param_grid=None,
-                    verbose=True, cv=0.2, scoring='accuracy', refit=False):
+                    verbose=False, cv=0.2, scoring='accuracy', refit=False):
         """
         Find the best values of hyperparameters using chosen validation scheme
 
@@ -145,21 +146,28 @@ class RedditModel(metaclass=ABCMeta):
         best_value: float
             Best value of the chosen metric
         """
+        self._classes = sorted(np.unique(y))
         if param_grid is None:
             file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 os.path.join('..', 'data', 'model_pars.json'))
             with open(file) as f:
-                param_grid = json.load(f)[self.model_type]
+                param_grid = json.load(f)[
+                    self.model_type]
 
         if 'step0' not in param_grid:
             param_grid_temp = {'step0': param_grid}
             param_grid = param_grid_temp
 
-        for step, current_grid in param_grid.items():
+        for step in range(len(param_grid)):
             best_pars = None
             best_value = -1000000.0
             if verbose:
-                print('Fitting {}'.format(step))
+                print('Fitting step {}'.format(step))
+
+            try:
+                current_grid = param_grid['step{}'.format(step)]
+            except KeyError:
+                raise KeyError('Step{} is not in the grid'.format(step))
 
             if not isinstance(current_grid, list):
                 current_grid = [current_grid]
@@ -203,8 +211,8 @@ class RedditModel(metaclass=ABCMeta):
         y: iterable, shape (n_samples, )
             Sequence of labels
         """
-        self._model.fit(X, y)
         self._classes = sorted(np.unique(y))
+        self._model.fit(X, y)
         return self
 
     def predict(self, X):
