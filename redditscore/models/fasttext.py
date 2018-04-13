@@ -16,6 +16,7 @@ import warnings
 
 import fastText
 import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 from . import redditmodel
@@ -56,7 +57,7 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
         self.dim = dim
         self.ws = ws
         self.epoch = epoch
-        self.minCount = 1
+        self.minCount = minCount
         self.minCountLabel = minCountLabel
         self.minn = minn
         self.maxn = maxn
@@ -103,12 +104,22 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X):
-        predictions = [self._model.predict(
-            " ".join(doc))[0][0][len(self.label):] for doc in X]
+        docs = [' '.join(doc) for doc in X]
+        predictions = self._model.predict(docs, k=1)[0]
+        predictions = np.array([pred[0][len(self.label):]
+                                for pred in predictions])
         return predictions
 
     def predict_proba(self, X):
-        probs = [self._model.predict(doc, k=self._num_classes) for doc in X]
+        docs = [' '.join(doc) for doc in X]
+        predictions = zip(*self._model.predict(docs, k=self._num_classes))
+        probabilities = []
+        for pred in predictions:
+            d = {key[len(self.label):]: value for key, value in zip(*pred)}
+            probabilities.append(d)
+        probabilities = pd.DataFrame(probabilities).fillna(1e-10)
+
+        return probabilities
 
 
 class FastTextModel(redditmodel.RedditModel):
@@ -128,4 +139,4 @@ class FastTextModel(redditmodel.RedditModel):
         """
         Set the parameters of the model.
         """
-        self.params.update(params)
+        self._model.set_params(**params)

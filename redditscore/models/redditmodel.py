@@ -57,6 +57,7 @@ class RedditModel(metaclass=ABCMeta):
         self._model = None
         self._cv_split = None
         self.params = None
+        self._classes = None
 
     def cv_score(self, X, y, cv=0.2, scoring='accuracy'):
         """
@@ -97,12 +98,13 @@ class RedditModel(metaclass=ABCMeta):
             self._cv_split = check_cv(cv, y=y, classifier=True)
 
         if scoring == 'neg_log_loss':
-            scoring = make_scorer(log_loss, labels=np.unique(y),
+            scoring = make_scorer(log_loss, labels=self._classes,
                                   greater_is_better=False, needs_proba=True)
         return cross_val_score(self._model, X, y, cv=self._cv_split,
                                scoring=scoring)
 
-    def tune_params(self, X, y, param_grid=None, verbose=True, cv=0.2, scoring='accuracy', refit=False):
+    def tune_params(self, X, y, param_grid=None,
+                    verbose=True, cv=0.2, scoring='accuracy', refit=False):
         """
         Find the best values of hyperparameters using chosen validation scheme
 
@@ -149,27 +151,37 @@ class RedditModel(metaclass=ABCMeta):
             with open(file) as f:
                 param_grid = json.load(f)[self.model_type]
 
-        best_pars = None
-        best_value = -1000000.0
+        if 'step0' not in param_grid:
+            param_grid_temp = {'step0': param_grid}
+            param_grid = param_grid_temp
 
-        if not isinstance(param_grid, list):
-            param_grid = [param_grid]
+        for step, current_grid in param_grid.items():
+            best_pars = None
+            best_value = -1000000.0
+            if verbose:
+                print('Fitting {}'.format(step))
 
-        for param_combination in param_grid:
-            items = sorted(param_combination.items())
-            keys, values = zip(*items)
+            if not isinstance(current_grid, list):
+                current_grid = [current_grid]
 
-            for v in product(*values):
-                params = dict(zip(keys, v))
-                self.set_params(**params)
-                if verbose:
-                    print('Now fitting model for {}'.format(params))
-                score = np.mean(self.cv_score(X, y, cv, scoring))
-                if verbose:
-                    print('{}: {}'.format(scoring, score))
-                if score > best_value:
-                    best_pars = params
-                    best_value = score
+            for param_combination in current_grid:
+                items = sorted(param_combination.items())
+                keys, values = zip(*items)
+
+                for v in product(*values):
+                    params = dict(zip(keys, v))
+                    self.set_params(**params)
+                    if verbose:
+                        print('Now fitting model for {}'.format(params))
+                    score = np.mean(self.cv_score(X, y, cv, scoring))
+                    if verbose:
+                        print('{}: {}'.format(scoring, score))
+                    if score > best_value:
+                        best_pars = params
+                        best_value = score
+
+            self.set_params(**best_pars)
+
         if verbose:
             print('Best {}: {} for {}'.format(scoring, best_value, best_pars))
 
@@ -192,6 +204,7 @@ class RedditModel(metaclass=ABCMeta):
             Sequence of labels
         """
         self._model.fit(X, y)
+        self._classes = sorted(np.unique(y))
         return self
 
     def predict(self, X):
@@ -211,6 +224,8 @@ class RedditModel(metaclass=ABCMeta):
         array, shape (n_samples, )
             Predicted class labels
         """
+
+        X = np.array(X)
         return self._model.predict(X)
 
     def predict_proba(self, X):
@@ -230,6 +245,8 @@ class RedditModel(metaclass=ABCMeta):
         array, shape (n_samples, num_classes)
             Predicted class probabilities
         """
+        if not isinstance(X, np.ndarray):
+            X = np.array(X)
         return self._model.predict_proba(X)
 
     def get_params(self, deep=None):
