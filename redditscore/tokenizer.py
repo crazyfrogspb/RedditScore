@@ -102,7 +102,11 @@ def unshorten_url(url, url_shorteners=None):
     resource = parsed.path
     if parsed.query != "":
         resource += "?" + parsed.query
-    h.request('HEAD', resource)
+    try:
+        h.request('HEAD', resource)
+    except TimeoutError:
+        warnings.warn('Timeour error for {}'.format(url))
+        return domain
     response = h.getresponse()
     if response.status // 100 == 3 and response.getheader('Location'):
         return unshorten_url(response.getheader('Location'), URL_SHORTENERS)
