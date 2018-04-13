@@ -115,7 +115,7 @@ def test_removepunct():
 def test_removebreaks():
     tokenizer = CrazyTokenizer(removebreaks=True)
     tokens = tokenizer.tokenize(break_text)
-    assert tokens == ['I', 'love', 'linebreaks']
+    assert tokens == ['i', 'love', 'linebreaks']
 
 
 def test_remove_nonunicode():
@@ -127,8 +127,8 @@ def test_remove_nonunicode():
 def test_decontract():
     tokenizer = CrazyTokenizer(decontract=True)
     tokens = tokenizer.tokenize(decontract_text)
-    assert tokens == ['I', 'have', 'been', 'waiting', 'to', 'drink',
-                      'this', 'beer', 'I', 'will', 'not', 'give', 'it', 'to', 'you']
+    assert tokens == ['i', 'have', 'been', 'waiting', 'to', 'drink',
+                      'this', 'beer', 'i', 'will', 'not', 'give', 'it', 'to', 'you']
 
 
 def test_splithashtags():
@@ -184,14 +184,14 @@ def test_batch_tokenizing():
 def test_url_tokenizing():
     tokenizer = CrazyTokenizer(urls='domain')
     tokens = tokenizer.tokenize(url_text)
-    assert tokens == ['I', 'always', 'go', 'to', 'rt_domain', 'to',
+    assert tokens == ['i', 'always', 'go', 'to', 'rt_domain', 'to',
                       'chat', 'about', 'politics', 'cnn_domain', 'sucks', 'man']
 
 
 def test_url_unwrapping():
     tokenizer = CrazyTokenizer(urls='domain_unwrap')
     tokens = tokenizer.tokenize(short_url_text)
-    assert tokens == ['JOBS', 'JOBS', 'JOBS', 'unemployment', 'claims',
+    assert tokens == ['jobs', 'jobs', 'jobs', 'unemployment', 'claims',
                       'have', 'fallen', 'to', 'a', '45-year',
                       'low', 'bloomberg_domain']
 
@@ -199,7 +199,7 @@ def test_url_unwrapping():
 def test_url_fast_unwrapping():
     tokenizer = CrazyTokenizer(urls='domain_unwrap_fast')
     tokens = tokenizer.tokenize(short_url_text)
-    assert tokens == ['JOBS', 'JOBS', 'JOBS', 'unemployment', 'claims',
+    assert tokens == ['jobs', 'jobs', 'jobs', 'unemployment', 'claims',
                       'have', 'fallen', 'to', 'a', '45-year',
                       'low', 'bloomberg_domain']
 

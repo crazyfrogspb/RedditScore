@@ -105,7 +105,7 @@ class CrazyTokenizer(object):
         If True, lowercase all tokens. Defaults to True.
 
     keepcaps: bool, optional
-        If True, keep ALL CAPS WORDS uppercased. Defaults to True.
+        If True, keep ALL CAPS WORDS uppercased. Defaults to False.
 
     normalize: int or bool, optional
         If not False, perform normalization of repeated charachers
@@ -198,7 +198,7 @@ class CrazyTokenizer(object):
         - list: list of emojis to replace
     """
 
-    def __init__(self, lowercase=True, keepcaps=True, normalize=3,
+    def __init__(self, lowercase=True, keepcaps=False, normalize=3,
                  ignorequotes=False, ignorestopwords=False, stem=False,
                  removepunct=True, removebreaks=True, decontract=False,
                  splithashtags=False, twitter_handles='TOKENTWITTERHANDLE',

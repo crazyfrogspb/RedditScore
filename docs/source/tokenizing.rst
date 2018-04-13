@@ -74,3 +74,18 @@ Deafult value is 3.
 .. parsed-literal::
 
     ['gooo', 'patriots']
+
+Ignoring quotes
+^^^^^^^^
+People often quote other comments or tweets, but it doesn't mean that they
+endorse the original message. Removing the content of the quotes can help
+you to get rid of that. Just set *ignorequotes* to True (False by deafult).
+
+.. code:: python
+
+    tokenizer = CrazyTokenizer(ignorequotes=True)
+    tokenizer.tokenize('And then she said: "I voted for Donald Trump"')
+
+.. parsed-literal::
+
+    ['and', 'then', 'she', 'said']
