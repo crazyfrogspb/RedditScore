@@ -15,6 +15,7 @@ import re
 import string
 import sys
 import warnings
+from collections import OrderedDict
 from http import client
 from math import log
 from urllib import parse
@@ -44,9 +45,14 @@ NEUTRAL_EMOJIS = [u'🙏']
 NORMALIZE_RE = re.compile(r"([a-zA-Z])\1\1+")
 URLS_RE = re.compile(
     r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
-EMAIL_LAST_PART = re.compile(r"[^@]+\.[^@]+")
-ALPHA_DIGITS = re.compile(r"[a-zA-Z0-9_]+")
-
+NUMBERS_RE = re.compile(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?")
+EMAIL_LAST_PART_RE = re.compile(r"[^@]+\.[^@]+")
+ALPHA_DIGITS_RE = re.compile(r"[a-zA-Z0-9_]+")
+TWITTER_HANDLES_RE = re.compile(r"@\w{1,15}")
+HASHTAGS_RE = re.compile(r"#\w+[\w'-]*\w+")
+REDDITORS_RE = re.compile(r"u/\w{1,20}")
+SUBREDDITS_RE = re.compile(r"/r/\w{1,20}")
+QUOTES_RE = re.compile(r'^".*"$')
 
 PREFIX_RE = re.compile(r'''^[\[\("'?!.,:;*\-]''')
 SUFFIX_RE = re.compile(r'''[ \] \)"'?!.,:;*\-]$''')
@@ -54,13 +60,19 @@ INFIX_RE = re.compile(r'''([.]{3,}|[\]\)\[\("?!,;@])''')
 
 URL_SHORTENERS = ['t', 'bit', 'goo', 'tinyurl']
 
+DECONTRACTIONS = OrderedDict([("won't", "will not"), ("can't", "can not"),
+                              ("n't", " not"), ("'re", " are"), ("'s", " is"),
+                              ("'d", " would"), ("'ll", " will"),
+                              ("'t", " not"), ("'ve", " have"),
+                              ("'m", " am")])
+
 
 def email_last_part_check(text):
-    return bool(EMAIL_LAST_PART.fullmatch(text))
+    return bool(EMAIL_LAST_PART_RE.fullmatch(text))
 
 
 def alpha_digits_check(text):
-    return bool(ALPHA_DIGITS.fullmatch(text))
+    return bool(ALPHA_DIGITS_RE.fullmatch(text))
 
 
 def custom_tokenizer(nlp):
@@ -70,18 +82,19 @@ def custom_tokenizer(nlp):
                      infix_finditer=INFIX_RE.finditer)
 
 
-def unshorten_url(url, url_shorteners):
+def unshorten_url(url, url_shorteners=None):
     # Fast URL domain extractor
     domain = tldextract.extract(url).domain
-    if domain not in url_shorteners:
-        return domain
+    if url_shorteners is not None:
+        if domain not in url_shorteners:
+            return domain
     parsed = parse.urlparse(url)
     if parsed.scheme == 'http':
         h = client.HTTPConnection(parsed.netloc)
     elif parsed.scheme == 'https':
         h = client.HTTPSConnection(parsed.netloc)
     else:
-        return 'TOKENURL'
+        return domain
     resource = parsed.path
     if parsed.query != "":
         resource += "?" + parsed.query
@@ -90,7 +103,7 @@ def unshorten_url(url, url_shorteners):
     if response.status // 100 == 3 and response.getheader('Location'):
         return unshorten_url(response.getheader('Location'), URL_SHORTENERS)
     elif response.status == 404:
-        return 'TOKENURL'
+        return domain
     else:
         return tldextract.extract(url).domain
 
@@ -144,8 +157,11 @@ class CrazyTokenizer(object):
 
     splithashtags: bool, optional
         If True, split hashtags according to word frequency.
+
         Example: "#vladimirputinisthebest" -> "vladimir putin is the best"
+
         Defaults to False.
+
         Note: it will not do anything if "hashtags" argument is not False
 
     twitter_handles, hashtags, numbers, subreddits, reddit_usernames, emails:
@@ -164,7 +180,7 @@ class CrazyTokenizer(object):
         - '': removes all occurrences of these tokens
         - 'domain': extract domain ("http://cnn.com" -> "cnn_domain")
         - 'domain_unwrap_fast': extract domain after unwraping links
-            for a list of URL shorteners (goo.gl, t.co, bit.ly, tinyurl.com)
+        for a list of URL shorteners (goo.gl, t.co, bit.ly, tinyurl.com)
         - 'domain_unwrap': extract domain after unwraping all links
 
         Defaults to 'domain'.
@@ -181,6 +197,7 @@ class CrazyTokenizer(object):
 
     keep_untokenized: None or list, optional
         List of expressions to keep untokenized
+
         Example: ["New York", "Los Angeles", "San Francisco"]
 
     whitespaces_to_underscores: boolean, optional
@@ -207,13 +224,15 @@ class CrazyTokenizer(object):
                  emails='TOKENEMAIL', extra_patterns=None, keep_untokenized=None,
                  whitespaces_to_underscores=True, remove_nonunicode=False,
                  pos_emojis=None, neg_emojis=None, neutral_emojis=None):
+        self.params = locals()
+
         self._nlp = English()
         self._nlp.tokenizer = custom_tokenizer(self._nlp)
         self._merging_matcher = Matcher(self._nlp.vocab)
         self._matcher = Matcher(self._nlp.vocab)
+
         self._replacements = {}
         self._domains = {}
-        self.params = locals()
 
         email_last_part_flag = self._nlp.vocab.add_flag(email_last_part_check)
         alpha_digits_flag = self._nlp.vocab.add_flag(alpha_digits_check)
@@ -258,20 +277,21 @@ class CrazyTokenizer(object):
                 {'IS_PUNCT': True}])
 
         if removebreaks:
-            def break_check(text): return bool(
-                re.compile(r"[\r\n]+").fullmatch(text))
+            def break_check(text):
+                return bool(re.compile(r"[\r\n]+").fullmatch(text))
             break_flag = self._nlp.vocab.add_flag(break_check)
             self._matcher.add('BREAK', self._remove_token, [{break_flag: True}])
 
         if normalize:
-            def normalize_check(text): return bool(NORMALIZE_RE.search(text))
+            def normalize_check(text):
+                return bool(NORMALIZE_RE.search(text))
             normalize_flag = self._nlp.vocab.add_flag(normalize_check)
             self._matcher.add('NORMALIZE', self._normalize,
                               [{normalize_flag: True}])
 
         if numbers is not False:
-            def number_check(text): return bool(re.compile(
-                r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?").fullmatch(text))
+            def number_check(text):
+                return bool(NUMBERS_RE.fullmatch(text))
             number_flag = self._nlp.vocab.add_flag(number_check)
             self._matcher.add('NUMBER', self._replace_token,
                               [{number_flag: True}])
@@ -298,16 +318,16 @@ class CrazyTokenizer(object):
             self._replacements['EMAIL'] = emails
 
         if twitter_handles is not False:
-            def twitter_handle_check(text): return bool(
-                re.compile(r"@\w{1,15}").fullmatch(text))
+            def twitter_handle_check(text):
+                return bool(TWITTER_HANDLES_RE.fullmatch(text))
             twitter_handle_flag = self._nlp.vocab.add_flag(twitter_handle_check)
             self._matcher.add('TWITTER_HANDLE', self._replace_token, [
                 {twitter_handle_flag: True}])
             self._replacements['TWITTER_HANDLE'] = twitter_handles
 
         if reddit_usernames is not False:
-            def reddit_username_check(text): return bool(
-                re.compile(r"u/\w{1,20}").fullmatch(text))
+            def reddit_username_check(text):
+                return bool(REDDITORS_RE.fullmatch(text))
             reddit_username_flag = self._nlp.vocab.add_flag(
                 reddit_username_check)
             self._matcher.add('REDDIT_USERNAME', self._replace_token, [
@@ -315,16 +335,16 @@ class CrazyTokenizer(object):
             self._replacements['REDDIT_USERNAME'] = reddit_usernames
 
         if subreddits is not False:
-            def subreddit_check(text): return bool(
-                re.compile(r"/r/\w{1,20}").fullmatch(text))
+            def subreddit_check(text):
+                return bool(SUBREDDITS_RE.fullmatch(text))
             subreddit_flag = self._nlp.vocab.add_flag(subreddit_check)
             self._matcher.add('SUBREDDIT', self._replace_token,
                               [{subreddit_flag: True}])
             self._replacements['SUBREDDIT'] = subreddits
 
         if (hashtags is not False) or splithashtags:
-            def hashtag_check(text): return bool(
-                re.compile(r"#\w+[\w'-]*\w+").fullmatch(text))
+            def hashtag_check(text):
+                return bool(HASHTAGS_RE.fullmatch(text))
             hashtag_flag = self._nlp.vocab.add_flag(hashtag_check)
             self._matcher.add('HASHTAG', self._hashtag_postprocess, [
                 {hashtag_flag: True}])
@@ -340,15 +360,15 @@ class CrazyTokenizer(object):
             self._merging_matcher.add('QUOTE', None, [{'ORTH': '"'}, {
                 'OP': '*', 'IS_ASCII': True}, {'ORTH': '"'}])
 
-            def doublequote_check(text): return bool(
-                re.compile(r'^".*"$').fullmatch(text))
+            def doublequote_check(text):
+                return bool(QUOTES_RE.fullmatch(text))
             doublequote_flag = self._nlp.vocab.add_flag(doublequote_check)
             self._matcher.add('DOUBLE_QUOTES', self._remove_token, [
                 {doublequote_flag: True}])
 
         if self._stopwords:
-            def stopword_check(text): return bool(
-                text.lower() in self._stopwords)
+            def stopword_check(text):
+                return bool(text.lower() in self._stopwords)
             stopword_flag = self._nlp.vocab.add_flag(stopword_check)
             self._matcher.add('STOPWORD', self._remove_token,
                               [{stopword_flag: True}])
@@ -463,7 +483,7 @@ class CrazyTokenizer(object):
                     tok._.transformed_text = domain + '_domain'
 
     def _unwrap_domain(self, __, doc, i, matches):
-        # Extract domain after unwrapping all URLs
+        # Extract domain after unwrapping specific URL shortners
         __, start, end = matches[i]
         span = doc[start:end]
         for tok in span:
@@ -472,17 +492,9 @@ class CrazyTokenizer(object):
                 if found_urls[0] in self._domains:
                     tok._.transformed_text = self._domains[found_urls[0]] + '_domain'
                 else:
-                    try:
-                        unwrapped_url = requests.head(
-                            found_urls[0], allow_redirects=True).url
-                        domain = tldextract.extract(unwrapped_url).domain
-                        self._domains[found_urls[0]] = domain
-                        tok._.transformed_text = domain + '_domain'
-                    except requests.exceptions.ConnectionError:
-                        warnings.warn(
-                            'Unable to connect to {}. Replacing URL with original domain'.format(found_urls[0]))
-                        tok._.transformed_text = tldextract.extract(
-                            found_urls[0]).domain + '_domain'
+                    domain = unshorten_url(found_urls[0])
+                    self._domains[found_urls[0]] = domain
+                    tok._.transformed_text = domain + '_domain'
 
     def _replace_token(self, __, doc, i, matches):
         # Replace tokens with something else
@@ -525,16 +537,7 @@ class CrazyTokenizer(object):
             out.append(text[i - k:i])
             i -= k
 
-        return " ".join(reversed(out))
-
-    def _split_hashtags(self, __, doc, i, matches):
-        # Split hashtags
-        __, start, end = matches[i]
-        span = doc[start:end]
-        for tok in span:
-            poss = self._infer_spaces(tok.text[1:]).split()
-            if poss:
-                tok._.transformed_text = poss
+        return list(reversed(out))
 
     def _hashtag_postprocess(self, __, doc, i, matches):
         # Process hashtags
@@ -544,7 +547,7 @@ class CrazyTokenizer(object):
             if self.params['hashtags']:
                 tok._.transformed_text = self.params['hashtags']
             elif self.params['splithashtags']:
-                poss = self._infer_spaces(tok.text[1:]).split()
+                poss = self._infer_spaces(tok.text[1:])
                 if poss:
                     tok._.transformed_text = poss
                 else:
@@ -553,19 +556,11 @@ class CrazyTokenizer(object):
                 tok._.transformed_text = tok.text
 
     @staticmethod
-    def _decontract(sentence):
+    def _decontract(text):
         # Expand contractions
-        sentence = re.sub(r"won't", "will not", sentence)
-        sentence = re.sub(r"can\'t", "can not", sentence)
-        sentence = re.sub(r"n\'t", " not", sentence)
-        sentence = re.sub(r"\'re", " are", sentence)
-        sentence = re.sub(r"\'s", " is", sentence)
-        sentence = re.sub(r"\'d", " would", sentence)
-        sentence = re.sub(r"\'ll", " will", sentence)
-        sentence = re.sub(r"\'t", " not", sentence)
-        sentence = re.sub(r"\'ve", " have", sentence)
-        sentence = re.sub(r"\'m", " am", sentence)
-        return sentence
+        for contraction, decontraction in DECONTRACTIONS.items():
+            text = re.sub(contraction, decontraction, text)
+        return text
 
     def _preprocess_text(self, text):
         # Do some preprocessing
@@ -576,7 +571,7 @@ class CrazyTokenizer(object):
                     filter(lambda x: x in string.printable, text)).strip()
             except UnicodeDecodeError:
                 warnings.warn(
-                    'UnicodeDecodeError while trying to remove non-unicode charachers')
+                    '(UnicodeDecodeError while trying to remove non-unicode characters')
         if self.params['decontract']:
             text = self._decontract(text)
 
@@ -593,7 +588,6 @@ class CrazyTokenizer(object):
             spans.append(doc[start:end])
         for span in spans:
             span.merge()
-
         for tok in doc:
             tok._.transformed_text = tok.text
 
