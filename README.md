@@ -22,20 +22,24 @@ Tokenizer usage:
 
 Model usage:
 
-    import pandas as pd
-    import os
-    from redditscore.tokenizer import CrazyTokenizer
-    import pandas as pd
-    from redditscore.model import BayesModel
+  import os
 
-    df = pd.read_csv(os.path.join('redditscore', 'data', 'reddit_small_sample.csv'))
-    tokenizer = CrazyTokenizer(urls='domain')
-    df['tokens'] = df['body'].apply(tokenizer.tokenize)
+  import pandas as pd
 
-    model = BayesModel(multi_model=True, alpha=1.0e-10, random_state=24, tfidf=True, ngram_range=(1,1))
-    X = df['tokens']
-    y = df['subgroup']
-    model.tune_params(X, y, cv=5)
+  from redditscore import tokenizer, models
+
+  df = pd.read_csv(os.path.join('redditscore', 'reddit_small_sample.csv'))
+  tokenizer = CrazyTokenizer(urls='domain', splithashtags=True)
+  df['tokens'] = df['body'].apply(tokenizer.tokenize)
+  X = df['tokens']
+  y = df['subreddit']
+
+  multi_model = sklearn.SklearnModel(
+      model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngrams=2)
+  fasttext_model = fasttext.FastTextModel(minCount=5, epoch=15)
+
+  multi_model.tune_params(X, y, cv=5, scoring='neg_log_loss')
+  fasttext_model.fit(X, y)
 
 
 To install package:
@@ -55,6 +59,5 @@ To cite:
       year = {2018},
       publisher = {GitHub},
       journal = {GitHub repository},
-      howpublished = {\url{https://github.com/crazyfrogspb/RedditScore}},
-      commit = {d431104daddf5b968aa8b835c5af906b7049d2db}
+      howpublished = {\url{https://github.com/crazyfrogspb/RedditScore}}
     }
