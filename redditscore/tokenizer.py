@@ -18,6 +18,7 @@ import warnings
 from collections import OrderedDict
 from http import client
 from math import log
+from socket import timeout
 from urllib import parse, request
 from urllib.error import HTTPError, URLError
 
@@ -37,6 +38,8 @@ except ImportError:
 
 Token.set_extension('transformed_text', default='', force=True)
 Doc.set_extension('tokens', default='', force=True)
+
+TIMEOUT = 0.5
 
 POS_EMOJIS = [u'😂', u'❤', u'♥', u'😍', u'😘', u'😊', u'👌', u'💕',
               u'👏', u'😁', u'☺', u'♡', u'👍', u'✌', u'😏', u'😉', u'🙌', u'😄']
@@ -111,11 +114,11 @@ def unshorten_url(url, url_shorteners=None):
 
 def get_url_title(url):
     try:
-        response = request.urlopen(url)
-    except (ValueError, HTTPError, URLError):
+        response = request.urlopen(url, timeout=TIMEOUT)
+        soup = BeautifulSoup(response, "html5lib")
+    except (ValueError, HTTPError, URLError, timeout):
         warnings.warn("Couldn't extract title from url {}".format(url))
-        return ''
-    soup = BeautifulSoup(response, "html5lib")
+        return unshorten_url(url)
     if soup.title is None:
         return ''
     return soup.title.string
@@ -190,6 +193,7 @@ class CrazyTokenizer(object):
 
         - False: leave URL intact
         - str: replacement token
+        - dict: replace all URLs stored in keys with the corresponding values
         - '': removes all occurrences of these tokens
         - 'domain': extract domain ("http://cnn.com" -> "cnn")
         - 'domain_unwrap_fast': extract domain after unwraping links
@@ -313,9 +317,14 @@ class CrazyTokenizer(object):
             self._replacements['NUMBER'] = numbers
 
         if urls is not False:
-            self._urls = urls
             if urls in ['domain', 'domain_unwrap_fast',
                         'domain_unwrap', 'title']:
+                self._urls = urls
+                self._matcher.add('URL', self._process_url, [
+                    {'LIKE_URL': True}])
+            elif isinstance(urls, dict):
+                self._domains = urls
+                self._urls = 'domain_unwrap_fast'
                 self._matcher.add('URL', self._process_url, [
                     {'LIKE_URL': True}])
             else:
@@ -632,7 +641,7 @@ class CrazyTokenizer(object):
         ["make", "america", "great", "again"]
         """
         if not isinstance(text, str):
-            raise ValueEror('Document {} is not a string'.format(text))
+            raise ValueError('Document {} is not a string'.format(text))
         text = self._preprocess_text(text)
         doc = self._nlp(text)
         return doc._.tokens
