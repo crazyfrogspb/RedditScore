@@ -18,7 +18,7 @@ import warnings
 from collections import OrderedDict
 from http import client
 from math import log
-from socket import timeout
+from socket import gaierror, timeout
 from urllib import parse, request
 from urllib.error import HTTPError, URLError
 
@@ -86,7 +86,7 @@ def custom_tokenizer(nlp):
                      infix_finditer=INFIX_RE.finditer)
 
 
-def unshorten_url(url, url_shorteners=None):
+def unshorten_url(url, url_shorteners=None, verbose=False):
     # Fast URL domain extractor
     domain = tldextract.extract(url).domain
     if url_shorteners is not None:
@@ -104,25 +104,28 @@ def unshorten_url(url, url_shorteners=None):
         resource += "?" + parsed.query
     try:
         h.request('HEAD', resource)
-    except TimeoutError:
-        warnings.warn('Timeour error for {}'.format(url))
+    except (TimeoutError, gaierror):
+        if verbose:
+            warnings.warn('Connection error for {}'.format(url))
         return domain
     response = h.getresponse()
     if response.status // 100 == 3 and response.getheader('Location'):
-        return unshorten_url(response.getheader('Location'), URL_SHORTENERS)
+        return unshorten_url(response.getheader('Location'),
+                             URL_SHORTENERS, verbose)
     elif response.status == 404:
         return domain
     else:
         return tldextract.extract(url).domain
 
 
-def get_url_title(url):
+def get_url_title(url, verbose=False):
     try:
         response = request.urlopen(url, timeout=TIMEOUT)
         soup = BeautifulSoup(response, "html5lib")
     except (ValueError, HTTPError, URLError, timeout):
-        warnings.warn("Couldn't extract title from url {}".format(url))
-        return unshorten_url(url)
+        if verbose:
+            warnings.warn("Couldn't extract title from url {}".format(url))
+        return tldextract.extract(url).domain
     if soup.title is None:
         return ''
     return soup.title.string
@@ -235,6 +238,9 @@ class CrazyTokenizer(object):
         - None: do not perform replacement
         - True: perform replacement of the default lists of emojis
         - list: list of emojis to replace
+
+    print_url_warnings: bool, optional
+        If True, print URL-related warnings. Defaults to False.
     """
 
     def __init__(self, lowercase=True, keepcaps=False, normalize=3,
@@ -245,7 +251,8 @@ class CrazyTokenizer(object):
                  subreddits=False, reddit_usernames=False,
                  emails=False, extra_patterns=None, keep_untokenized=None,
                  whitespaces_to_underscores=True, remove_nonunicode=False,
-                 pos_emojis=None, neg_emojis=None, neutral_emojis=None):
+                 pos_emojis=None, neg_emojis=None, neutral_emojis=None,
+                 print_url_warnings=False):
         self.params = locals()
 
         self._nlp = English()
@@ -495,16 +502,20 @@ class CrazyTokenizer(object):
                         found_urls[0]).domain
                 elif self._urls != 'title':
                     if self._urls == 'domain_unwrap':
-                        domain = unshorten_url(found_urls[0])
+                        domain = unshorten_url(
+                            found_urls[0], verbose=self.params['print_url_warnings'])
                     else:
-                        domain = unshorten_url(found_urls[0], URL_SHORTENERS)
+                        domain = unshorten_url(
+                            found_urls[0], URL_SHORTENERS,
+                            self.params['print_url_warnings'])
                     self._domains[found_urls[0]] = domain
                     tok._.transformed_text = domain
                 elif self._urls == 'title':
                     if found_urls[0] in self._titles:
                         tok._.transformed_text = self._titles[found_urls[0]]
                     else:
-                        title = self.tokenize(get_url_title(found_urls[0]))
+                        title = self.tokenize(get_url_title(
+                            found_urls[0], self.params['print_url_warnings']))
                         tok._.transformed_text = title
                         self._titles = title
 
@@ -645,7 +656,8 @@ class CrazyTokenizer(object):
         ["make", "america", "great", "again"]
         """
         if not isinstance(text, str):
-            raise ValueError('Document {} is not a string'.format(text))
+            warnings.warn('Document {} is not a string'.format(text))
+            return []
         text = self._preprocess_text(text)
         doc = self._nlp(text)
         return doc._.tokens
