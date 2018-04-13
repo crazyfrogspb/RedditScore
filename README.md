@@ -11,23 +11,23 @@ Full documentation lives here: http://redditscore.readthedocs.io
 
 Usage example:
 
-  import os
-  import pandas as pd
-  from redditscore import tokenizer, models
-  tokenizer.tokenize_doc(trump_rant)
+	import os
+	import pandas as pd
+	from redditscore import tokenizer, models
+	tokenizer.tokenize_doc(trump_rant)
 
-  df = pd.read_csv(os.path.join('redditscore', 'reddit_small_sample.csv'))
-  tokenizer = CrazyTokenizer(urls='domain', splithashtags=True)
-  df['tokens'] = df['body'].apply(tokenizer.tokenize)
-  X = df['tokens']
-  y = df['subreddit']
+	df = pd.read_csv(os.path.join('redditscore', 'reddit_small_sample.csv'))
+	tokenizer = CrazyTokenizer(urls='domain', splithashtags=True)
+	df['tokens'] = df['body'].apply(tokenizer.tokenize)
+	X = df['tokens']
+	y = df['subreddit']
 
-  multi_model = sklearn.SklearnModel(
-      model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngrams=2)
-  fasttext_model = fasttext.FastTextModel(minCount=5, epoch=15)
+	multi_model = sklearn.SklearnModel(
+		model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngrams=2)
+	fasttext_model = fasttext.FastTextModel(minCount=5, epoch=15)
 
-  multi_model.tune_params(X, y, cv=5, scoring='neg_log_loss')
-  fasttext_model.fit(X, y)
+	multi_model.tune_params(X, y, cv=5, scoring='neg_log_loss')
+	fasttext_model.fit(X, y)
 
 To install package:
 
