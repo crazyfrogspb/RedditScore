@@ -45,7 +45,7 @@ NEUTRAL_EMOJIS = [u'🙏']
 
 NORMALIZE_RE = re.compile(r"([a-zA-Z])\1\1+")
 URLS_RE = re.compile(
-    r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+    r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\ ),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 NUMBERS_RE = re.compile(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?")
 EMAIL_LAST_PART_RE = re.compile(r"[^@]+\.[^@]+")
 ALPHA_DIGITS_RE = re.compile(r"[a-zA-Z0-9_]+")
@@ -116,6 +116,8 @@ def get_url_title(url):
         warnings.warn("Couldn't extract title from url {}".format(url))
         return ''
     soup = BeautifulSoup(response, "html5lib")
+    if soup.title is None:
+        return ''
     return soup.title.string
 
 
@@ -189,7 +191,7 @@ class CrazyTokenizer(object):
         - False: leave URL intact
         - str: replacement token
         - '': removes all occurrences of these tokens
-        - 'domain': extract domain ("http://cnn.com" -> "cnn_domain")
+        - 'domain': extract domain ("http://cnn.com" -> "cnn")
         - 'domain_unwrap_fast': extract domain after unwraping links
         for a list of URL shorteners (goo.gl, t.co, bit.ly, tinyurl.com)
         - 'domain_unwrap': extract domain after unwraping all links
@@ -311,11 +313,9 @@ class CrazyTokenizer(object):
             self._replacements['NUMBER'] = numbers
 
         if urls is not False:
-            if urls == 'domain':
-                self._matcher.add('URL', self._extract_domain,
-                                  [{'LIKE_URL': True}])
-            elif urls in ['domain_unwrap_fast', 'domain_unwrap', 'title']:
-                self._urls = urls
+            self._urls = urls
+            if urls in ['domain', 'domain_unwrap_fast',
+                        'domain_unwrap', 'title']:
                 self._matcher.add('URL', self._process_url, [
                     {'LIKE_URL': True}])
             else:
@@ -468,17 +468,6 @@ class CrazyTokenizer(object):
             tok._.transformed_text = NORMALIZE_RE.sub(r"\1" * self.params['normalize'],
                                                       tok._.transformed_text)
 
-    @staticmethod
-    def _extract_domain(__, doc, i, matches):
-        # Extract domain without unwrapping
-        __, start, end = matches[i]
-        span = doc[start:end]
-        for tok in span:
-            found_urls = URLS_RE.findall(tok.text)
-            if found_urls:
-                tok._.transformed_text = tldextract.extract(
-                    found_urls[0]).domain + '_domain'
-
     def _process_url(self, __, doc, i, matches):
         # Process found URLs
         __, start, end = matches[i]
@@ -487,14 +476,17 @@ class CrazyTokenizer(object):
             found_urls = URLS_RE.findall(tok.text)
             if found_urls:
                 if self._urls != 'title' and found_urls[0] in self._domains:
-                    tok._.transformed_text = self._domains[found_urls[0]] + '_domain'
+                    tok._.transformed_text = self._domains[found_urls[0]]
+                elif self._urls == 'domain':
+                    tok._.transformed_text = tldextract.extract(
+                        found_urls[0]).domain
                 elif self._urls != 'title':
                     if self._urls == 'domain_unwrap':
                         domain = unshorten_url(found_urls[0])
                     else:
                         domain = unshorten_url(found_urls[0], URL_SHORTENERS)
                     self._domains[found_urls[0]] = domain
-                    tok._.transformed_text = domain + '_domain'
+                    tok._.transformed_text = domain
                 elif self._urls == 'title':
                     if found_urls[0] in self._titles:
                         tok._.transformed_text = self._titles[found_urls[0]]
@@ -639,31 +631,8 @@ class CrazyTokenizer(object):
         >>> tokenizer.tokenize("#makeamericagreatagain")
         ["make", "america", "great", "again"]
         """
+        if not isinstance(text, str):
+            raise ValueEror('Document {} is not a string'.format(text))
         text = self._preprocess_text(text)
         doc = self._nlp(text)
         return doc._.tokens
-
-    def tokenize_docs(self, texts, batch_size=1000, n_threads=-1):
-        """
-        Tokenize documents in batches
-
-        Parameters
-        ----------
-        texts: iterable
-            Iterable with documents to process
-        batch_size: int, optional
-            Batch size for processing
-        n_threads: int, optional
-            Number of parallel threads
-
-        Returns
-        -------
-        all_tokens: list of lists
-            List with tokenized documents
-        """
-        texts = [self._preprocess_text(text) for text in texts]
-        all_tokens = []
-        for doc in self._nlp.pipe(texts, batch_size=batch_size,
-                                  n_threads=n_threads):
-            all_tokens.append(doc._.tokens)
-        return all_tokens

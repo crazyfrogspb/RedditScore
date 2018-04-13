@@ -79,8 +79,7 @@ classifier. CrazyTokenizer gives you a few options to remove stop words:
   >>> tokenizer.tokenize('PhD life is great: eat, work, and sleep')
   ['phd', 'life', 'great', 'eat', 'work', 'sleep']
 
-  - Alternatively, you can supply your own custom list of the stop words.
-  Letter case doesn't matter.
+  - Alternatively, you can supply your own custom list of the stop words. Letter case doesn't matter.
 
   >>> tokenizer = CrazyTokenizer(ignorestopwords=['Vladimir', "Putin"])
   >>> tokenizer.tokenize("The best leader in the world is Vladimir Putin")
@@ -140,8 +139,9 @@ information when you calculate RedditScores for the Twitter data.
 
 Dealing with special tokens
 ^^^^^^^^
-CrazyTokenizer correctly handles twitter_handles, subreddits, reddit_usernames,
-emails, all forms of numbers, and splits them as separate tokens:
+CrazyTokenizer correctly handles Twitter handles, subreddits, Reddit usernames,
+emails, all sorts of numbers, and extracts them as separate tokens:
+
 >>> tokenizer = CrazyTokenizer()
 >>> text = "@crazyfrogspb recommends /r/BeardAdvice!"
 >>> tokenizer.tokenize(text)
@@ -158,3 +158,136 @@ Well, it's your lucky day, CrazyTokenizer can do that!
 
 URLs
 ^^^^^^^^
+NLP practicioners often simply remove all URL occurrences since they do not
+seem to contain any useful semantic information. Of course, CrazyTokenizer
+correctly recognizes URLs as separate tokens and can remove or replace them
+with a placeholder token.
+
+>>> tokenizer = CrazyTokenizer(urls=False)
+>>> text = "Where is my job then?https://t.co/pN2TE5HDQm"
+>>> tokenizer.tokenize(text)
+['where', 'is', 'my', 'job', 'then', 'https://t.co/pN2TE5HDQm']
+>>> tokenizer = CrazyTokenizer(urls='URL')
+>>> tokenizer.tokenize(text)
+['where', 'is', 'my', 'job', 'then', 'URL']
+
+CrazyTokenizer can do something even more interesting though. Let's explore
+all options one by one.
+
+First, CrazyTokenizer can extract domains from your URLs.
+
+>>> tokenizer = CrazyTokenizer(urls='domain')
+>>> text = "http://nytimes.com or http://breitbart.com, that is the question"
+>>> tokenizer.tokenize(text)
+['nytimes', 'or', 'breitbart', 'that', 'is', 'the', 'question']
+
+Unfortunately, links on Twitter are often shortened, so extracting domain
+directly doesn't make a lot of sense. Not to worry though, CrazyTokenizer
+can handle that for you! Setting ``urls='domain_unwrap_fast'`` will deal with
+links shortened by the following URL shorteners:
+t.co, bit.ly, goo.gl, tinyurl.com.
+
+>>> tokenizer = CrazyTokenizer(urls='domain_unwrap_fast')
+>>> text = "Where is my job then?https://t.co/pN2TE5HDQm"
+>>> tokenizer.tokenize(text)
+['where', 'is', 'my', 'job', 'then', 'bloomberg_domain']
+
+If you want, CrazyTokenizer can attempt to unwrap ALL extracted URLs.
+
+>>> tokenizer = CrazyTokenizer(urls='domain_unwrap')
+>>> text = "Where is my job then?https://t.co/pN2TE5HDQm"
+>>> tokenizer.tokenize(text)
+['where', 'is', 'my', 'job', 'then', 'bloomberg_domain']
+
+Last but not least, CrazyTokenizer can extract web page titles, tokenize them,
+and insert to your tokenized sentences.
+
+>>> tokenizer = CrazyTokenizer(urls='title')
+>>> text = "I love Russia https://goo.gl/3ioXU4"
+>>> tokenizer.tokenize(text)
+['i', 'love', 'russia', 'russia', 'to', 'block', 'telegram', 'app', 'over', 'encryption', 'bbc', 'news']
+
+**Please note** that CrazyTokenizer has to make requests to the websites,
+and it is a very time-consuming operation, so CrazyTokenizer saves all
+parsed domains and web page titles. If you plan to experiment with
+the different preprocessing options and/or models, you should consider saving
+extracted domains/titles. This will significantly speed up tokenizing process.
+
+>>> import json
+>>> with open('domains.json', 'w') as f:
+      json.dump(tokenizer._domains, f)
+>>> with open('titles.json', 'w') as f:
+      json.dump(tokenizer._titles, f)
+>>> tokenizer = CrazyTokenizer(urls='domain_unwrap_fast')
+>>> with open('domains.json', 'r') as f:
+      tokenizer._domains = json.load(f)
+>>> tokenizer = CrazyTokenizer(urls='title')
+>>> with open('titles.json', 'r') as f:
+      tokenizer._titles = json.load(f)
+
+Extra patterns and keeping untokenized
+^^^^^^^^
+You can also supply your own replacement rules to CrazyTokenizer. In particular,
+you need to provide a tuple that contains unique name for your rule, compiled
+re pattern and a replacement token.
+
+Also, it makes sense to keep some common expressions (e.g., "New York Times")
+untokenized. If you think that it can improve your model quality, feel free to
+supply a list of strings that should be kept as single tokens.
+
+>>> import re
+>>> rule0 = re.compile(r"[S,s]ucks")
+>>> rule1 = re.compile(r"[R,r]ules")
+>>> tokenizer = CrazyTokenizer(extra_patterns=[('rule0', rule0, 'rules'),
+                                               ('rule1', 'rule1, "sucks')],
+                               keep_untokenized=['St.Petersburg'],
+                               lowercase=False)
+>>> text = "Moscow rules, St.Petersburg sucks"
+['Moscow', 'sucks', 'St.Petersburg', 'rules']
+
+Converting whitespaces to underscores
+^^^^^^^^
+Popular implementations of models (most notably, fastText) do not support
+custom token splitting rules and simply split on whitespaces. In order to deal
+with that, CrazyTokenizer can replace all whitespaces in the final tokens by
+underscores (enabled by deafult).
+
+>>> tokenizer = CrazyTokenizer(whitespaces_to_underscores=True, keep_untokenized=["New York"])
+>>> text = "New York is a great place to make a rat friend"
+>>> tokenizer.tokenize(text)
+['new_york', 'is', 'a', 'great', 'place', 'to', 'make', 'a', 'rat', 'friend']
+
+Removing non-unicode characters
+^^^^^^^^
+>>> tokenizer = CrazyTokenizer(remove_nonunicode=True)
+>>> text = "Россия - священная наша держава, Россия - великая наша страна!"
+>>> tokenizer.tokenize(text)
+[]
+
+Emojis
+^^^^^^^^
+Social media users are notoriously famous for their excessive use of emojis.
+CrazyTokenizer can replace different kind of emojis with the
+corresponding word tokens.
+
+>>> tokenizer = CrazyTokenizer(pos_emojis=True, neg_emojis=True, neutral_emojis=True)
+>>> text = '😍 😭 😩???!!!!'
+>>> tokenizer.tokenize(text)
+['POS_EMOJI', 'NEG_EMOJI', 'NEG_EMOJI']
+
+You can supply your own lists of emojis as well.
+
+>>> tokenizer = CrazyTokenizer(pos_emojis=['🌮', '🍔'], neutral_emojis=['😕'], removepunct=False)
+>>> text = '🌮 + 🍔 = 😕'
+>>> tokenizer.tokenize(text)
+['POS_EMOJI', '+', 'POS_EMOJI', '=', 'NEUTRAL_EMOJI']
+
+Tokenizing a bunch of documents
+--------------------
+Tokenizing 10,000 Reddit comments takes about 10 seconds on my Gigabyte Aero 15.
+
+>>> import pandas as pd
+>>> import os
+>>> df = pd.read_csv(os.path.join('redditscore', 'data', 'reddit_small_sample.csv'))
+>>> tokenizer = CrazyTokenizer(urls='domain')
+>>> df['tokens'] = df['body'].apply(tokenizer.tokenize)
