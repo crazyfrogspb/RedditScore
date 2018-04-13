@@ -28,8 +28,8 @@ Usage example:
     y = df['subreddit']
 
     multi_model = sklearn.SklearnModel(
-        model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngram_range=(1, 1))
-    fasttext_model = fasttext.FastTextModel(minCount=5)
+        model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngrams=2)
+    fasttext_model = fasttext.FastTextModel(minCount=5, epoch=15)
 
     multi_model.tune_params(X, y, cv=5, scoring='neg_log_loss')
     fasttext_model.fit(X, y)

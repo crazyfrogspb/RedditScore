@@ -11,7 +11,7 @@ CrazyTokenizer was developed specifically for tokenizing Reddit comments and
 tweets, and it includes many features to deal with these types of documents.
 Of course, feel free to use for any other kind of text data as well.
 
-CrazyTokenizer is based on the amazing `spaCY NLP framework <https://spacy.io/`__.
+CrazyTokenizer is based on the amazing `spaCY NLP framework <https://spacy.io/>`__.
 Make sure to check it out!
 
 Initializing
@@ -26,7 +26,7 @@ Now you can start tokenizing!
 
 >>> text = "@crazyfrogspb Hey,dude, have you heard that https://github.com/crazyfrogspb/RedditScore is the best Python library?"
 >>> tokenizer.tokenizer(text)
-['TOKENTWITTERHANDLE', 'hey', 'dude', 'have', 'you', 'heard', 'that', 'github_domain', 'is', 'the', 'best', 'python', 'library']
+['@crazyfrogspb', 'hey', 'dude', 'have', 'you', 'heard', 'that', 'https://github.com/crazyfrogspb/RedditScore', 'is', 'the', 'best', 'python', 'library']
 
 Features
 --------------------
@@ -34,11 +34,11 @@ Features
 Lowercasing and all caps
 ^^^^^^^^
 For many text classification problems, keeping capital letters only
-introduces unnecessary noise. Enabling option *lowercase* (True by default)
+introduces unnecessary noise. Setting ``lowercase=True`` (True by default)
 will lowercase all words in your documents.
 
 Sometimes you want to keep things typed in all caps (e.g., abbreviations).
-Setting *keepcaps* to True will do exactly that (default is False).
+Setting ``keepcaps=True`` will do exactly that (default is False).
 
 >>> tokenizer = CrazyTokenizer(lowercase=True, keepcaps=True)
 >>> tokenizer.tokenize('Moscow is the capital of RUSSIA!')
@@ -48,9 +48,8 @@ Normalizing
 ^^^^^^^^
 Typing like thiiiis is amaaaaazing! However, in terms of text classification
 *amaaaaazing* is probably not too different from *amaaaazing*. CrazyTokenizer
-can normalize sequences of repeated characters for you. Just set *normalize*
-argument to the integer number. This is the number of characters you want to keep.
-Deafult value is 3.
+can normalize sequences of repeated characters for you. Just set ``normalize=n``,
+where *n* is the number of characters you want to keep. Default value is 3.
 
 >>> tokenizer = CrazyTokenizer(normalize=3)
 >>> tokenizer.tokenize('GOOOOOOOOO Patriots!!!!')
@@ -60,7 +59,7 @@ Ignoring quotes
 ^^^^^^^^
 People often quote other comments or tweets, but it doesn't mean that they
 endorse the original message. Removing the content of the quotes can help
-you to get rid of that. Just set *ignorequotes* to True (False by deafult).
+you to get rid of that. Just set ``ignorequotes=True`` (False by deafult).
 
 >>> tokenizer = CrazyTokenizer(ignorequotes=True)
 >>> tokenizer.tokenize('And then she said: "I voted for Donald Trump"')
@@ -72,7 +71,7 @@ Removing stop words can sometimes significantly boost performance of your
 classifier. CrazyTokenizer gives you a few options to remove stop words:
 
   - Using NLTK lists of stop words. Just pass the name of the language
-    of your documents to the *ignorestopwords* parameter.
+    of your documents to the ``ignorestopwords`` parameter.
 
   >>> tokenizer = CrazyTokenizer(ignorestopwords='english')
   # You might have to run nltk.download('stopwords') first
@@ -88,8 +87,8 @@ classifier. CrazyTokenizer gives you a few options to remove stop words:
 Word stemming and lemmatizing
 ^^^^^^^^
 If you have NLTK installed, CrazyTokenizer can use PorterStemmer or
-WordNetLemmatizer for you. Just pass 'stem' or 'lemm' options
-respectively to *stem* parameter.
+WordNetLemmatizer for you. Just pass ``stem`` or ``lemm`` options
+respectively to ``stem`` parameter.
 
 >>> tokenizer = CrazyTokenizer(stem='stem')
 >>> tokenizer.tokenize("I am an unbelievably fantastic human being")
@@ -99,7 +98,7 @@ Removing punctuation and lineb
 ^^^^^^^^
 Punctuation and linebreak characters usually just introduce extra noise
 to your text classification problem,
-so you can easily remove it with *removepunct* and *removebreaks* options.
+so you can easily remove it with ``removepunct`` and ``removebreaks`` options.
 Both default to True.
 
 >>> tokenizer = CrazyTokenizer(removepunct=True, removebreaks=True)
