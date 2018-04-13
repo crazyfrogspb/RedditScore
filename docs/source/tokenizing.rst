@@ -11,6 +11,9 @@ CrazyTokenizer was developed specifically for tokenizing Reddit comments and
 tweets, and it includes many features to deal with these types of documents.
 Of course, feel free to use for any other kind of text data as well.
 
+CrazyTokenizer is based on the amazing `spaCY NLP framework <https://spacy.io/`__.
+Make sure to check it out!
+
 Initializing
 --------------------
 To import and to initialize an instance of CrazyTokenizer with the default
@@ -33,3 +36,37 @@ Now you can start tokenizing!
 
     ['TOKENTWITTERHANDLE', 'hey', 'dude', 'have', 'you', 'heard', 'that',
     'github_domain', 'is', 'the', 'best', 'python', 'library', 'ever']
+
+Features
+--------------------
+
+Lowercasing and all caps
+^^^^^^^^
+For many text classification problems, keeping capital letters only
+introduces unnecessary noise. Enabling option *lowercase* (True by default)
+will lowercase all words in your documents.
+
+Sometimes you want to keep things typed in all caps (e.g., abbreviations).
+Setting *keepcaps* to True will do exactly that (default is False).
+
+.. code:: python
+    tokenizer = CrazyTokenizer(lowercase=True, keepcaps=True)
+    tokenizer.tokenize('Moscow is the capital of RUSSIA!')
+
+.. parsed-literal::
+    ['moscow', 'is', 'the', 'capital', 'of', 'RUSSIA']
+
+Normalizing
+^^^^^^^^
+Typing like thiiiis is amaaaaazing! However, in terms of text classification
+*amaaaaazing* is probably not too different from *amaaaazing*. CrazyTokenizer
+can normalize sequences of repeated characters for you. Just set *normalize*
+argument to the integer number. This is the number of characters you want to keep.
+Deafult value is 3.
+
+.. code:: python
+    tokenizer = CrazyTokenizer(normalize=3)
+    tokenizer.tokenize('GOOOOOOOOO Patriots!!!!')
+
+.. parsed-literal::
+    ['gooo', 'patriots']
