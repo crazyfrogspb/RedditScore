@@ -50,10 +50,12 @@ Sometimes you want to keep things typed in all caps (e.g., abbreviations).
 Setting *keepcaps* to True will do exactly that (default is False).
 
 .. code:: python
+
     tokenizer = CrazyTokenizer(lowercase=True, keepcaps=True)
     tokenizer.tokenize('Moscow is the capital of RUSSIA!')
 
 .. parsed-literal::
+
     ['moscow', 'is', 'the', 'capital', 'of', 'RUSSIA']
 
 Normalizing
@@ -65,8 +67,10 @@ argument to the integer number. This is the number of characters you want to kee
 Deafult value is 3.
 
 .. code:: python
+
     tokenizer = CrazyTokenizer(normalize=3)
     tokenizer.tokenize('GOOOOOOOOO Patriots!!!!')
 
 .. parsed-literal::
+
     ['gooo', 'patriots']
