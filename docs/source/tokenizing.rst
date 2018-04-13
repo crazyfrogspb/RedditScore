@@ -94,7 +94,7 @@ respectively to ``stem`` parameter.
 >>> tokenizer.tokenize("I am an unbelievably fantastic human being")
 ['i', 'am', 'an', 'unbeliev', 'fantast', 'human', 'be']
 
-Removing punctuation and lineb
+Removing punctuation and linebreaks
 ^^^^^^^^
 Punctuation and linebreak characters usually just introduce extra noise
 to your text classification problem,
@@ -147,7 +147,7 @@ emails, all sorts of numbers, and extracts them as separate tokens:
 ['@crazyfrogspb', 'recommends', '/r/beardadvice']
 
 However, you might want to completely remove certain types of tokens
-(for example, it makes to remove subreddit names if you want to compute
+(for example, it makes sense to remove subreddit names if you want to compute
 RedditScores for the Twitter data), or to replace them with special tokens.
 Well, it's your lucky day, CrazyTokenizer can do that!
 
@@ -210,19 +210,21 @@ and insert to your tokenized sentences.
 and it is a very time-consuming operation, so CrazyTokenizer saves all
 parsed domains and web page titles. If you plan to experiment with
 the different preprocessing options and/or models, you should consider saving
-extracted domains/titles. This will significantly speed up tokenizing process.
+extracted domains/titles and then supplying saved dictionary as an argument
+to ``urls`` parameter.
 
 >>> import json
 >>> with open('domains.json', 'w') as f:
       json.dump(tokenizer._domains, f)
 >>> with open('titles.json', 'w') as f:
       json.dump(tokenizer._titles, f)
->>> tokenizer = CrazyTokenizer(urls='domain_unwrap_fast')
 >>> with open('domains.json', 'r') as f:
-      tokenizer._domains = json.load(f)
+      domains = json.load(f)
 >>> tokenizer = CrazyTokenizer(urls='title')
 >>> with open('titles.json', 'r') as f:
-      tokenizer._titles = json.load(f)
+      titles = json.load(f)
+>>> tokenizer = CrazyTokenizer(urls=domains)
+>>> >>> tokenizer = CrazyTokenizer(urls=titles)
 
 Extra patterns and keeping untokenized
 ^^^^^^^^

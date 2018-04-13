@@ -5,7 +5,7 @@ RedditScore is a library that contains tools for building Reddit-based text clas
 
 RedditScore includes:
     - Document tokenizer with myriads of options, including Reddit- and Twitter-specific options
-    - Tools to build and tune most popular text classification models without any hassle
+    - Tools to build and tune the most popular text classification models without any hassle
     - Instruments to help you build more efficient Reddit-based models and to obtain RedditScores (Nikitin2018_)
 
 **Note:** RedditScore library and this tutorial are work-in-progress.
