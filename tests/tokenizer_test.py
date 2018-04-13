@@ -204,6 +204,12 @@ def test_url_fast_unwrapping():
                       'low', 'bloomberg_domain']
 
 
+def test_url_title():
+    tokenizer = CrazyTokenizer(urls='title')
+    tokens = tokenizer.tokenize("http://google.com")
+    assert tokens == ['google']
+
+
 def test_keep_untokenized():
     tokenizer = CrazyTokenizer(
         keep_untokenized=['New York City', 'Los Angeles'])
