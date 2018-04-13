@@ -9,24 +9,12 @@ Includes:
 
 Full documentation lives here: http://redditscore.readthedocs.io
 
-Tokenizer usage:
+Usage example:
 
-	from redditscore.tokenizer import CrazyTokenizer
-	trump_rant = "@realDonaldTrump #fucktrump WHO ELECTED this Guy?! 😭'"
-	tokenizer = CrazyTokenizer(ignorestopwords='english', splithashtags=True, neg_emojis=True, hashtags=False)
+	import os
+	import pandas as pd
+	from redditscore import tokenizer, models
 	tokenizer.tokenize_doc(trump_rant)
-
-	Output:
-	['TOKENTWITTERHANDLE', 'fuck', 'trump', 'WHO', 'ELECTED', 'guy', 'NEG_EMOJI']
-
-
-Model usage:
-
-  import os
-
-  import pandas as pd
-
-  from redditscore import tokenizer, models
 
   df = pd.read_csv(os.path.join('redditscore', 'reddit_small_sample.csv'))
   tokenizer = CrazyTokenizer(urls='domain', splithashtags=True)
@@ -39,8 +27,7 @@ Model usage:
   fasttext_model = fasttext.FastTextModel(minCount=5, epoch=15)
 
   multi_model.tune_params(X, y, cv=5, scoring='neg_log_loss')
-  fasttext_model.fit(X, y)
-
+	fasttext_model.fit(X, y)
 
 To install package:
 
