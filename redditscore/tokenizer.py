@@ -154,11 +154,12 @@ class CrazyTokenizer(object):
         If True, ignore tokens contained within double quotes.
         Defaults to False.
 
-    ignorestopwords: str, list, or False, optional
+    ignorestopwords: str, list, or boolean, optional
         Whether to ignore stopwords
 
         - str: language to get a list of stopwords for from NLTK package
         - list: list of stopwords to remove
+        - True: use built-in list of the english stop words
         - False: keep all tokens
 
         Defaults to False

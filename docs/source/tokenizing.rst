@@ -70,6 +70,12 @@ Removing stop words
 Removing stop words can sometimes significantly boost performance of your
 classifier. CrazyTokenizer gives you a few options to remove stop words:
 
+  - Using built-in list of the english stop words (``ignorestopwords=True``)
+
+  >>> tokenizer = CrazyTokenizer(ignorestopwords=True)
+  >>> tokenizer.tokenize('PhD life is great: eat, work, and sleep')
+  ['phd', 'life', 'great', 'eat', 'work', 'sleep']
+
   - Using NLTK lists of stop words. Just pass the name of the language
     of your documents to the ``ignorestopwords`` parameter.
 
@@ -268,7 +274,10 @@ Removing non-unicode characters
 Emojis
 ^^^^^^^^
 Social media users are notoriously famous for their excessive use of emojis.
-CrazyTokenizer can replace different kind of emojis with the
+CrazyTokenizer automatically detects emojis even if they are in UTF-8
+(e.g., \\xf0\\x9f\\x94\\xa5) or Unicode (U+1F6BD) formats.
+
+In addition, CrazyTokenizer can replace different kind of emojis with the
 corresponding word tokens.
 
 >>> tokenizer = CrazyTokenizer(pos_emojis=True, neg_emojis=True, neutral_emojis=True)
