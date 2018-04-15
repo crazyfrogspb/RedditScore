@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CrazyTokenizer: SpaCy-based tokenizer with Twitter- and Reddit-specific features
+CrazyTokenizer: spaCy-based tokenizer with Twitter- and Reddit-specific features
 
 Author: Evgenii Nikitin <e.nikitin@nyu.edu>
 
@@ -10,6 +10,7 @@ Copyright (c) 2018 Evgenii Nikitin. All rights reserved.
 This work is licensed under the terms of the MIT license.
 """
 
+import json
 import os
 import re
 import string
@@ -26,7 +27,6 @@ import tldextract
 from bs4 import BeautifulSoup
 from spacy.lang.en import English
 from spacy.matcher import Matcher
-from spacy.tokenizer import Tokenizer
 from spacy.tokens import Doc, Token
 
 try:
@@ -47,20 +47,18 @@ NEG_EMOJIS = [u'😭', u'😩', u'😒', u'😔', u'😱']
 NEUTRAL_EMOJIS = [u'🙏']
 
 NORMALIZE_RE = re.compile(r"([a-zA-Z])\1\1+")
-URLS_RE = re.compile(
-    r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\ ),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
-NUMBERS_RE = re.compile(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?")
-EMAIL_LAST_PART_RE = re.compile(r"[^@]+\.[^@]+")
 ALPHA_DIGITS_RE = re.compile(r"[a-zA-Z0-9_]+")
 TWITTER_HANDLES_RE = re.compile(r"@\w{1,15}")
-HASHTAGS_RE = re.compile(r"#\w+[\w'-]*\w+")
 REDDITORS_RE = re.compile(r"u/\w{1,20}")
 SUBREDDITS_RE = re.compile(r"/r/\w{1,20}")
 QUOTES_RE = re.compile(r'^".*"$')
+BREAKS_RE = re.compile(r"[\r\n]+")
+URLS_RE = re.compile(
+    r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\ ),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
-PREFIX_RE = re.compile(r'''^[\[\("'?!.,:;*\-]''')
-SUFFIX_RE = re.compile(r'''[ \] \)"'?!.,:;*\-]$''')
-INFIX_RE = re.compile(r'''([.]{3,}|[\]\)\[\("?!,;#@|])''')
+UTF_CHARS = r'a-z0-9_\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff'
+TAG_EXP = r'(^|[^0-9A-Z&/]+)(#|\uff03)([0-9A-Z_]*[A-Z_]+[%s]*)' % UTF_CHARS
+HASHTAGS_RE = re.compile(TAG_EXP, re.UNICODE | re.IGNORECASE)
 
 URL_SHORTENERS = ['t', 'bit', 'goo', 'tinyurl']
 
@@ -71,27 +69,33 @@ DECONTRACTIONS = OrderedDict([("won't", "will not"), ("can't", "can not"),
                               ("'m", " am")])
 
 
-def email_last_part_check(text):
-    return bool(EMAIL_LAST_PART_RE.fullmatch(text))
+DATA_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                         os.path.join('data'))
+
+with open(os.path.join(DATA_PATH, 'emojis_utf.json')) as f:
+    EMOJIS_UTF = json.load(f)
+with open(os.path.join(DATA_PATH, 'emojis_unicode.json')) as f:
+    EMOJIS_UNICODE = json.load(f)
+
+EMOJIS_UTF_RE = re.compile(r"\\x", re.IGNORECASE)
+EMOJIS_UNICODE_RE = re.compile(r"u+", re.IGNORECASE)
 
 
 def alpha_digits_check(text):
     return bool(ALPHA_DIGITS_RE.fullmatch(text))
 
 
-def custom_tokenizer(nlp):
-    # Customize SpaCy tokenizer
-    return Tokenizer(nlp.vocab, prefix_search=PREFIX_RE.search,
-                     suffix_search=SUFFIX_RE.search,
-                     infix_finditer=INFIX_RE.finditer)
+def retokenize_check(text):
+    if (text.count('@') > 1 or text.count('#') > 1) and len(text) > 3:
+        return True
+    return False
 
 
 def unshorten_url(url, url_shorteners=None, verbose=False):
     # Fast URL domain extractor
     domain = tldextract.extract(url).domain
-    if url_shorteners is not None:
-        if domain not in url_shorteners:
-            return domain
+    if url_shorteners is not None and domain not in url_shorteners:
+        return domain
     parsed = parse.urlparse(url)
     if parsed.scheme == 'http':
         h = client.HTTPConnection(parsed.netloc)
@@ -112,10 +116,8 @@ def unshorten_url(url, url_shorteners=None, verbose=False):
     if response.status // 100 == 3 and response.getheader('Location'):
         return unshorten_url(response.getheader('Location'),
                              URL_SHORTENERS, verbose)
-    elif response.status == 404:
-        return domain
     else:
-        return tldextract.extract(url).domain
+        return domain
 
 
 def get_url_title(url, verbose=False):
@@ -256,30 +258,22 @@ class CrazyTokenizer(object):
         self.params = locals()
 
         self._nlp = English()
-        self._nlp.tokenizer = custom_tokenizer(self._nlp)
         self._merging_matcher = Matcher(self._nlp.vocab)
         self._matcher = Matcher(self._nlp.vocab)
 
         self._replacements = {}
         self._domains = {}
-        self._titles = {}
+        self._stopwords = None
 
-        email_last_part_flag = self._nlp.vocab.add_flag(email_last_part_check)
         alpha_digits_flag = self._nlp.vocab.add_flag(alpha_digits_check)
 
         self._merging_matcher.add(
-            'HASHTAG', None, [{'ORTH': '#'}, {alpha_digits_flag: True}])
+            'HASHTAG', None, [{'ORTH': '#'}, {'IS_ASCII': True}])
         self._merging_matcher.add(
             'SUBREDDIT', None, [{'ORTH': '/r'}, {'ORTH': '/'},
                                 {alpha_digits_flag: True}])
         self._merging_matcher.add('REDDIT_USERNAME', None, [
             {'ORTH': 'u'}, {'ORTH': '/'}, {alpha_digits_flag: True}])
-
-        self._merging_matcher.add('EMAIL', None, [{alpha_digits_flag: True}, {
-                                  'ORTH': '@'}, {email_last_part_flag: True}])
-
-        self._merging_matcher.add(
-            'TWITTER_HANDLE', None, [{'ORTH': '@'}, {alpha_digits_flag: True}])
 
         if isinstance(ignorestopwords, str) and ('nltk' in sys.modules):
             try:
@@ -287,11 +281,12 @@ class CrazyTokenizer(object):
             except OSError:
                 raise ValueError(
                     'Language {} was not found by NLTK'.format(ignorestopwords))
+        elif ignorestopwords is True:
+            self._matcher.add('STOPWORDS', self._remove_token,
+                              [{'IS_STOP': True}])
         elif isinstance(ignorestopwords, list):
             self._stopwords = [word.lower() for word in ignorestopwords]
-        elif (not ignorestopwords) or (ignorestopwords is None):
-            self._stopwords = []
-        else:
+        elif ignorestopwords is not False:
             raise TypeError('Type {} is not supported by ignorestopwords parameter'.format(
                 type(ignorestopwords)))
 
@@ -308,7 +303,7 @@ class CrazyTokenizer(object):
 
         if removebreaks:
             def break_check(text):
-                return bool(re.compile(r"[\r\n]+").fullmatch(text))
+                return bool(BREAKS_RE.fullmatch(text))
             break_flag = self._nlp.vocab.add_flag(break_check)
             self._matcher.add('BREAK', self._remove_token, [{break_flag: True}])
 
@@ -320,11 +315,8 @@ class CrazyTokenizer(object):
                               [{normalize_flag: True}])
 
         if numbers is not False:
-            def number_check(text):
-                return bool(NUMBERS_RE.fullmatch(text))
-            number_flag = self._nlp.vocab.add_flag(number_check)
             self._matcher.add('NUMBER', self._replace_token,
-                              [{number_flag: True}])
+                              [{'LIKE_NUM': True}])
             self._replacements['NUMBER'] = numbers
 
         if urls is not False:
@@ -380,9 +372,9 @@ class CrazyTokenizer(object):
             self._matcher.add('HASHTAG', self._hashtag_postprocess, [
                 {hashtag_flag: True}])
             if splithashtags:
-                file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                    os.path.join('data', 'wordsfreq.txt'))
-                self._words = open(file).read().split()
+                file = os.path.join(DATA_PATH, 'wordsfreq.txt')
+                with open(file) as f:
+                    self._words = f.read().split()
                 self._wordcost = dict((k, log((i + 1) * log(len(self._words))))
                                       for i, k in enumerate(self._words))
                 self._maxword = max(len(x) for x in self._words)
@@ -456,6 +448,12 @@ class CrazyTokenizer(object):
             self._matcher.add('WORD_TO_STEM', self._stem_word,
                               [{'IS_ALPHA': True}])
 
+        retokenize_flag = self._nlp.vocab.add_flag(retokenize_check)
+        self._matcher.add('RETOKENIZE', self._retokenize,
+                          [{retokenize_flag: True, 'IS_PUNCT': False,
+                            'LIKE_URL': False, 'LIKE_EMAIL': False,
+                            'LIKE_NUM': False}])
+
         self._nlp.add_pipe(self._merge_doc, name='merge_doc', last=True)
         self._nlp.add_pipe(self._match_doc, name='match_doc', last=True)
         self._nlp.add_pipe(self._postproc_doc, name='postproc_doc', last=True)
@@ -495,7 +493,7 @@ class CrazyTokenizer(object):
         for tok in span:
             found_urls = URLS_RE.findall(tok.text)
             if found_urls:
-                if self._urls != 'title' and found_urls[0] in self._domains:
+                if found_urls[0] in self._domains:
                     tok._.transformed_text = self._domains[found_urls[0]]
                 elif self._urls == 'domain':
                     tok._.transformed_text = tldextract.extract(
@@ -503,7 +501,8 @@ class CrazyTokenizer(object):
                 elif self._urls != 'title':
                     if self._urls == 'domain_unwrap':
                         domain = unshorten_url(
-                            found_urls[0], verbose=self.params['print_url_warnings'])
+                            found_urls[0], None,
+                            self.params['print_url_warnings'])
                     else:
                         domain = unshorten_url(
                             found_urls[0], URL_SHORTENERS,
@@ -511,13 +510,10 @@ class CrazyTokenizer(object):
                     self._domains[found_urls[0]] = domain
                     tok._.transformed_text = domain
                 elif self._urls == 'title':
-                    if found_urls[0] in self._titles:
-                        tok._.transformed_text = self._titles[found_urls[0]]
-                    else:
-                        title = self.tokenize(get_url_title(
-                            found_urls[0], self.params['print_url_warnings']))
-                        tok._.transformed_text = title
-                        self._titles = title
+                    title = self.tokenize(get_url_title(
+                        found_urls[0], self.params['print_url_warnings']))
+                    tok._.transformed_text = title
+                    self._domains[found_urls[0]] = title
 
     def _replace_token(self, __, doc, i, matches):
         # Replace tokens with something else
@@ -534,6 +530,16 @@ class CrazyTokenizer(object):
         span = doc[start:end]
         for tok in span:
             tok._.transformed_text = ''
+
+    def _retokenize(self, __, doc, i, matches):
+        # Retokenize
+        __, start, end = matches[i]
+        span = doc[start:end]
+        for tok in span:
+            text = tok.text
+            text = re.sub(r'([#@])', r' \1', text)
+            text = re.sub(r'\s{2,}', ' ', text).strip()
+            tok._.transformed_text = self.tokenize(text)
 
     def _infer_spaces(self, text):
         # Infer location of spaces in hashtags
@@ -570,11 +576,9 @@ class CrazyTokenizer(object):
             if self.params['hashtags']:
                 tok._.transformed_text = self.params['hashtags']
             elif self.params['splithashtags']:
-                poss = self._infer_spaces(tok.text[1:])
+                poss = self._infer_spaces(tok._.transformed_text[1:])
                 if poss:
                     tok._.transformed_text = poss
-                else:
-                    tok._.transformed_text = tok.text
             else:
                 tok._.transformed_text = tok.text
 
@@ -597,6 +601,14 @@ class CrazyTokenizer(object):
                     '(UnicodeDecodeError while trying to remove non-unicode characters')
         if self.params['decontract']:
             text = self._decontract(text)
+
+        if EMOJIS_UTF_RE.findall(text):
+            for utf_code, emoji in EMOJIS_UTF.items():
+                text = text.replace(utf_code, emoji)
+
+        if EMOJIS_UNICODE_RE.findall(text):
+            for utf_code, emoji in EMOJIS_UNICODE.items():
+                text = text.replace(utf_code, emoji)
 
         text = re.sub(r'([;,!?\(\)\[\]])', r' \1 ', text)
         text = re.sub(r'\s{2,}', ' ', text)

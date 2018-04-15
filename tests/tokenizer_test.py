@@ -90,12 +90,9 @@ def test_stop():
                                'vladimir', 'putin', 'and'], lowercase=False)
     tokens = tokenizer.tokenize(vova_text)
     assert tokens == ['is', 'the', 'BEST', 'AMAZING']
-    tokenizer = CrazyTokenizer(ignorestopwords='english')
+    tokenizer = CrazyTokenizer(ignorestopwords=True)
     tokens = tokenizer.tokenize(english_stop)
     assert tokens == []
-    tokenizer = CrazyTokenizer(ignorestopwords='russian')
-    tokens = tokenizer.tokenize(russian_stop)
-    assert tokens == ['привет', 'женя']
 
 
 def test_stem():
@@ -109,7 +106,8 @@ def test_removepunct():
     tokens = tokenizer.tokenize(punct_text)
     print(tokens)
     assert tokens == ['this', 'is', 'the', 'text', 'which', 'contains', 'a',
-                      'lot', 'of', 'punctuation', 'amazing', "isn't", 'it', 'who', 'knows']
+                      'lot', 'of', 'punctuation', 'amazing', "is", "n't",
+                      'it', 'who', 'knows']
 
 
 def test_removebreaks():
@@ -167,18 +165,10 @@ def test_tokenizing():
 
     tokens = tokenizer.tokenize(story_of_my_life)
     correct_answer = ['hi', 'my', 'name', 'TOKENTWITTERHANDLE', 'I', 'looove', 'beer', 'plato', 'once', 'said', 'bad', 'way', 'to',
-                      'phrase', 'it', 'another', 'pint', 'please', 'by', 'way', "don't", 'forget', 'to', 'visit', "i'm", 'also', 'on',
+                      'phrase', 'it', 'another', 'pint', 'please', 'by', 'way', 'do', "n't", 'forget', 'to', 'visit', 'I', "'m", 'also', 'on',
                                       'reddit', 'as', 'TOKENREDDITOR', 'I', 'especially', 'love', 'TOKENSUBREDDIT', 'sending', 'my', 'love', 'to', 'you',
                                       'as', 'they', 'say', 'POS_EMOJI', '24']
     assert tokens == correct_answer
-
-
-def test_batch_tokenizing():
-    documents = [story_of_my_life, russian_stop,
-                 english_stop, vova_text, spartak_text]
-    tokenizer = CrazyTokenizer(decontract=True)
-    all_tokens = tokenizer.tokenize_docs(documents, batch_size=2, n_threads=2)
-    assert len(all_tokens) == len(documents)
 
 
 def test_url_tokenizing():
