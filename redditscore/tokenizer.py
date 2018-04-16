@@ -41,6 +41,7 @@ Doc.set_extension('tokens', default='', force=True)
 
 TIMEOUT = 0.5
 
+
 POS_EMOJIS = [u'😂', u'❤', u'♥', u'😍', u'😘', u'😊', u'👌', u'💕',
               u'👏', u'😁', u'☺', u'♡', u'👍', u'✌', u'😏', u'😉', u'🙌', u'😄']
 NEG_EMOJIS = [u'😭', u'😩', u'😒', u'😔', u'😱']
@@ -68,7 +69,6 @@ DECONTRACTIONS = OrderedDict([("won't", "will not"), ("can't", "can not"),
                               ("'t", " not"), ("'ve", " have"),
                               ("'m", " am")])
 
-
 DATA_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                          os.path.join('data'))
 
@@ -78,17 +78,36 @@ with open(os.path.join(DATA_PATH, 'emojis_unicode.json')) as f:
     EMOJIS_UNICODE = json.load(f)
 
 EMOJIS_UTF_RE = re.compile(r"\\x", re.IGNORECASE)
-EMOJIS_UNICODE_RE = re.compile(r"u+", re.IGNORECASE)
+EMOJIS_UNICODE_RE = re.compile(r"u\+", re.IGNORECASE)
+EMOJIS_UTF_NOSPACE_RE = re.compile(r'(?<!x..)(\\x)', re.IGNORECASE)
+EMOJIS_UNICODE_NOSPACE_RE = re.compile(r'(\D{2,})(U\+)', re.IGNORECASE)
 
 
 def alpha_digits_check(text):
     return bool(ALPHA_DIGITS_RE.fullmatch(text))
 
 
+def hashtag_check(text):
+    return bool(HASHTAGS_RE.fullmatch(text))
+
+
+def twitter_handle_check(text):
+    return bool(TWITTER_HANDLES_RE.fullmatch(text))
+
+
 def retokenize_check(text):
-    if (text.count('@') > 1 or text.count('#') > 1) and len(text) > 3:
+    if (text.count('@') > 1 or text.count('#') > 1) and text.count(' ') == 0:
+        return True
+    elif (text.count('@') == 1 or text.count('#') == 1) \
+            and text.startswith('@') is False and text.startswith('#') is False:
         return True
     return False
+
+
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
 
 
 def unshorten_url(url, url_shorteners=None, verbose=False):
@@ -108,7 +127,7 @@ def unshorten_url(url, url_shorteners=None, verbose=False):
         resource += "?" + parsed.query
     try:
         h.request('HEAD', resource)
-    except (TimeoutError, gaierror):
+    except (TimeoutError, ConnectionRefusedError, gaierror):
         if verbose:
             warnings.warn('Connection error for {}'.format(url))
         return domain
@@ -267,14 +286,20 @@ class CrazyTokenizer(object):
         self._stopwords = None
 
         alpha_digits_flag = self._nlp.vocab.add_flag(alpha_digits_check)
+        hashtag_flag = self._nlp.vocab.add_flag(hashtag_check)
+        twitter_handle_flag = self._nlp.vocab.add_flag(twitter_handle_check)
 
         self._merging_matcher.add(
             'HASHTAG', None, [{'ORTH': '#'}, {'IS_ASCII': True}])
         self._merging_matcher.add(
-            'SUBREDDIT', None, [{'ORTH': '/r'}, {'ORTH': '/'},
-                                {alpha_digits_flag: True}])
-        self._merging_matcher.add('REDDIT_USERNAME', None, [
-            {'ORTH': 'u'}, {'ORTH': '/'}, {alpha_digits_flag: True}])
+            'SUBREDDIT', None,
+            [{'ORTH': '/r'}, {'ORTH': '/'}, {alpha_digits_flag: True}],
+            [{'ORTH': 'r'}, {'ORTH': '/'}, {alpha_digits_flag: True}])
+        self._merging_matcher.add('REDDIT_USERNAME', None,
+                                  [{'ORTH': '/u'}, {'ORTH': '/'},
+                                      {alpha_digits_flag: True}],
+                                  [{'ORTH': 'u'}, {'ORTH': '/'},
+                                   {alpha_digits_flag: True}])
 
         if isinstance(ignorestopwords, str) and ('nltk' in sys.modules):
             try:
@@ -342,9 +367,6 @@ class CrazyTokenizer(object):
             self._replacements['EMAIL'] = emails
 
         if twitter_handles is not False:
-            def twitter_handle_check(text):
-                return bool(TWITTER_HANDLES_RE.fullmatch(text))
-            twitter_handle_flag = self._nlp.vocab.add_flag(twitter_handle_check)
             self._matcher.add('TWITTER_HANDLE', self._replace_token, [
                 {twitter_handle_flag: True}])
             self._replacements['TWITTER_HANDLE'] = twitter_handles
@@ -367,9 +389,6 @@ class CrazyTokenizer(object):
             self._replacements['SUBREDDIT'] = subreddits
 
         if (hashtags is not False) or splithashtags:
-            def hashtag_check(text):
-                return bool(HASHTAGS_RE.fullmatch(text))
-            hashtag_flag = self._nlp.vocab.add_flag(hashtag_check)
             self._matcher.add('HASHTAG', self._hashtag_postprocess, [
                 {hashtag_flag: True}])
             if splithashtags:
@@ -453,7 +472,8 @@ class CrazyTokenizer(object):
         self._matcher.add('RETOKENIZE', self._retokenize,
                           [{retokenize_flag: True, 'IS_PUNCT': False,
                             'LIKE_URL': False, 'LIKE_EMAIL': False,
-                            'LIKE_NUM': False}])
+                            'LIKE_NUM': False, hashtag_flag: False,
+                            twitter_handle_flag: False}])
 
         self._nlp.add_pipe(self._merge_doc, name='merge_doc', last=True)
         self._nlp.add_pipe(self._match_doc, name='match_doc', last=True)
@@ -604,14 +624,17 @@ class CrazyTokenizer(object):
             text = self._decontract(text)
 
         if EMOJIS_UTF_RE.findall(text):
+            text = EMOJIS_UTF_NOSPACE_RE.sub(r' \1', text)
             for utf_code, emoji in EMOJIS_UTF.items():
                 text = text.replace(utf_code, emoji)
 
         if EMOJIS_UNICODE_RE.findall(text):
+            text = EMOJIS_UNICODE_NOSPACE_RE.sub(r'\1 \2', text)
             for utf_code, emoji in EMOJIS_UNICODE.items():
                 text = text.replace(utf_code, emoji)
 
-        text = re.sub(r'([;,!?\(\)\[\]])', r' \1 ', text)
+        text = text.replace('.@', '. @')
+        text = re.sub(r'([*;,!?\(\)\[\]])', r' \1', text)
         text = re.sub(r'\s{2,}', ' ', text)
 
         return text.strip()
