@@ -73,6 +73,7 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
 
         self._model = None
         self._num_classes = None
+        self.class_embeddings = None
 
     def fit(self, X, y):
         if not isinstance(X, np.ndarray):
@@ -100,6 +101,11 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
                                                 t=self.t,
                                                 label=self.label,
                                                 verbose=self.verbose)
+        os.remove(path)
+        fd, path = tempfile.mkstemp()
+        self._model.save_softmax(path)
+        self.class_embeddings = pd.read_csv(
+            path, skiprows=[0], delimiter=' ').dropna(axis=1)
         os.remove(path)
         return self
 

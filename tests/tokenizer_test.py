@@ -39,6 +39,7 @@ story_of_my_life = """
 url_text = "I always go to http://rt.com to chat about politics, http://forums.news.cnn.com/ sucks man"
 short_url_text = "JOBS, JOBS, JOBS! Unemployment claims have fallen to a 45-year low. https://t.co/pN2TE5HDQm"
 untokenized_text = "Rats are actually more polite in New York City than in Los Angeles"
+annoying_case = 'b@realDonaldTrump@crazyfrogspb crazy@mail.ru #maga#russiago http://fscorelab.ru/overview#scoring'
 
 
 def test_emoji():
@@ -206,3 +207,16 @@ def test_keep_untokenized():
     tokens = tokenizer.tokenize(untokenized_text)
     assert tokens == ['rats', 'are', 'actually', 'more', 'polite',
                       'in', 'new_york_city', 'than', 'in', 'los_angeles']
+
+
+def test_annoying_case():
+    tokenizer = CrazyTokenizer()
+    tokens = tokenizer.tokenize(annoying_case)
+    assert tokens == ['b', '@realdonaldtrump', '@crazyfrogspb',
+                      'crazy@mail.ru', '#maga',
+                      '#russiago', 'http://fscorelab.ru/overview#scoring']
+    tokenizer = CrazyTokenizer(emails='EMAIL', twitter_handles='HANDLE',
+                               urls='domain', splithashtags=True)
+    tokens = tokenizer.tokenize(annoying_case)
+    assert tokens == ['b', 'HANDLE', 'HANDLE', 'EMAIL', 'maga', 'russia', 'go',
+                      'fscorelab']
