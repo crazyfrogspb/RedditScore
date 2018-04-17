@@ -4,6 +4,7 @@ Package for performing Reddit-based text analysis
 Includes:
 - Document tokenizer with myriads of options, including Reddit- and Twitter-specific options
 - Tools to build and tune most popular text classification models without any hassle
+- Function to easily collect Reddit comments from Google BigQuery
 - Instruments to help you build more efficient Reddit-based models and to obtain RedditScores
 - Tools to use pre-built Reddit-based models to obtain RedditScores for your data
 

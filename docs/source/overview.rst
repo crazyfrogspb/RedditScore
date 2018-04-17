@@ -6,7 +6,9 @@ RedditScore is a library that contains tools for building Reddit-based text clas
 RedditScore includes:
     - Document tokenizer with myriads of options, including Reddit- and Twitter-specific options
     - Tools to build and tune the most popular text classification models without any hassle
+    - Function to easily collect Reddit comments from Google BigQuery
     - Instruments to help you build more efficient Reddit-based models and to obtain RedditScores (Nikitin2018_)
+    - Tools to use pre-built Reddit-based models to obtain RedditScores for your data
 
 **Note:** RedditScore library and this tutorial are work-in-progress.
 `Let me know if you experience any issues <https://github.com/crazyfrogspb/RedditScore/issues>`__.
