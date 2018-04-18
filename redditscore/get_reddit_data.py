@@ -52,6 +52,51 @@ def construct_query(subreddits, month, score_limit):
     return query
 
 
+def construct_sample_score_query(subreddits, month, sample_size, score_limit):
+    # Construct a query with sampling top-scoring comments
+    subreddits = '", "'.join(subreddits)
+    subreddits = '"' + subreddits + '"'
+    if score_limit:
+        score = " AND score >= {}".format(score_limit)
+    else:
+        score = ""
+    query = """
+    SELECT
+        id,
+        body,
+        subreddit,
+        author,
+        created_utc,
+        link_id,
+        parent_id,
+        score
+    FROM (
+        SELECT
+            id,
+            body,
+            subreddit,
+            author,
+            created_utc,
+            link_id,
+            parent_id,
+            score,
+            ROW_NUMBER() OVER(PARTITION BY subreddit ORDER BY score DESC) as pos
+        FROM [fh-bigquery:reddit_comments.""" + month + """]
+        WHERE
+            subreddit in (""" + subreddits + """)
+            AND body != '[deleted]'
+            AND body != '[removed]'
+            AND body NOT LIKE '%has been removed%'
+            AND body NOT LIKE '%has been overwritten%'
+            AND body NOT LIKE '%performed automatically%'
+            AND body NOT LIKE '%bot action performed%'
+            AND body NOT LIKE '%autowikibot%'
+            AND LENGTH(body) > 0""" + score + """
+    )
+    WHERE pos <= """ + str(sample_size)
+    return query
+
+
 def construct_sample_query(subreddits, month, sample_size, score_limit):
     # Constuct a query string with random sampling
     subreddits = '", "'.join(subreddits)
@@ -99,7 +144,8 @@ def construct_sample_query(subreddits, month, sample_size, score_limit):
 
 
 def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
-                 comments_per_month=None, csv_directory=None, verbose=False):
+                 comments_per_month=None, top_scores=False,
+                 csv_directory=None, verbose=False):
     """
     Obtain Reddit comments using Google BigQuery
 
@@ -125,6 +171,10 @@ def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
     comments_per_month: int, optional
         Number of comments to sample from each subbredit per month. If None,
         retrieve all comments.
+
+    top_scores: bool, optional
+        If True, sample top-scoring comments in each subreddit
+        instead of random sampling.
 
     csv_directory: str, optional
         CSV directory to save retrieved data. If None, return a DataFrame with
@@ -174,6 +224,9 @@ def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
                 'Querying from [fh-bigquery:reddit_comments.{}]'.format(table_name))
         if comments_per_month is None:
             query = construct_query(subreddits, table_name, score_limit)
+        elif top_scores:
+            query = construct_sample_score_query(
+                subreddits, table_name, comments_per_month, score_limit)
         else:
             query = construct_sample_query(
                 subreddits, table_name, comments_per_month, score_limit)
