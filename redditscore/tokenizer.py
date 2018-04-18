@@ -294,6 +294,10 @@ class CrazyTokenizer(object):
 
     print_url_warnings: bool, optional
         If True, print URL-related warnings. Defaults to False.
+
+    latin_chars_fix: bool, optional
+        Try applying this fix if you have a lot of \\xe2\\x80\\x99-like
+        or U+1F601-like strings in your data. Defaults to False.
     """
 
     def __init__(self, lowercase=True, keepcaps=False, normalize=3,
@@ -305,7 +309,7 @@ class CrazyTokenizer(object):
                  emails=False, extra_patterns=None, keep_untokenized=None,
                  whitespaces_to_underscores=True, remove_nonunicode=False,
                  pos_emojis=None, neg_emojis=None, neutral_emojis=None,
-                 print_url_warnings=False):
+                 print_url_warnings=False, latin_chars_fix=False):
         self.params = locals()
 
         self._nlp = English()
@@ -654,19 +658,20 @@ class CrazyTokenizer(object):
         if self.params['decontract']:
             text = self._decontract(text)
 
-        if EMOJIS_UTF_RE.findall(text):
-            text = EMOJIS_UTF_NOSPACE_RE.sub(r' \1', text)
-            for utf_code, emoji in EMOJIS_UTF.items():
-                text = text.replace(utf_code, emoji)
+        if self.params['latin_chars_fix']:
+            if EMOJIS_UTF_RE.findall(text):
+                text = EMOJIS_UTF_NOSPACE_RE.sub(r' \1', text)
+                for utf_code, emoji in EMOJIS_UTF.items():
+                    text = text.replace(utf_code, emoji)
 
-        if EMOJIS_UNICODE_RE.findall(text):
-            text = EMOJIS_UNICODE_NOSPACE_RE.sub(r'\1 \2', text)
-            for utf_code, emoji in EMOJIS_UNICODE.items():
-                text = text.replace(utf_code, emoji)
+            if EMOJIS_UNICODE_RE.findall(text):
+                text = EMOJIS_UNICODE_NOSPACE_RE.sub(r'\1 \2', text)
+                for utf_code, emoji in EMOJIS_UNICODE.items():
+                    text = text.replace(utf_code, emoji)
 
-        if LATIN_CHARS_RE.findall(text):
-            for _hex, _char in LATIN_1_CHARS:
-                text = text.replace(_hex, _char)
+            if LATIN_CHARS_RE.findall(text):
+                for _hex, _char in LATIN_1_CHARS:
+                    text = text.replace(_hex, _char)
 
         text = text.replace('.@', '. @')
         text = re.sub(r'([*;,!?\(\)\[\]])', r' \1', text)
