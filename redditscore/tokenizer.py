@@ -81,6 +81,37 @@ EMOJIS_UTF_RE = re.compile(r"\\x", re.IGNORECASE)
 EMOJIS_UNICODE_RE = re.compile(r"u\+", re.IGNORECASE)
 EMOJIS_UTF_NOSPACE_RE = re.compile(r'(?<!x..)(\\x)', re.IGNORECASE)
 EMOJIS_UNICODE_NOSPACE_RE = re.compile(r'(\D{2,})(U\+)', re.IGNORECASE)
+LATIN_CHARS_RE = re.compile(r'\\xe2\\', re.IGNORECASE)
+
+LATIN_1_CHARS = (
+    (r'\xe2\x80\x99', "'"),
+    (r'\xc3\xa9', 'e'),
+    (r'\xe2\x80\x90', '-'),
+    (r'\xe2\x80\x91', '-'),
+    (r'\xe2\x80\x92', '-'),
+    (r'\xe2\x80\x93', '-'),
+    (r'\xe2\x80\x94', '-'),
+    (r'\xe2\x80\x94', '-'),
+    (r'\xe2\x80\x98', "'"),
+    (r'\xe2\x80\x9b', "'"),
+    (r'\xe2\x80\x9c', '"'),
+    (r'\xe2\x80\x9c', '"'),
+    (r'\xe2\x80\x9d', '"'),
+    (r'\xe2\x80\x9e', '"'),
+    (r'\xe2\x80\x9f', '"'),
+    (r'\xe2\x80\xa6', '...'),
+    (r'\xe2\x80\xb2', "'"),
+    (r'\xe2\x80\xb3', "'"),
+    (r'\xe2\x80\xb4', "'"),
+    (r'\xe2\x80\xb5', "'"),
+    (r'\xe2\x80\xb6', "'"),
+    (r'\xe2\x80\xb7', "'"),
+    (r'\xe2\x81\xba', "+"),
+    (r'\xe2\x81\xbb', "-"),
+    (r'\xe2\x81\xbc', "="),
+    (r'\xe2\x81\xbd', "("),
+    (r'\xe2\x81\xbe', ")")
+)
 
 
 def alpha_digits_check(text):
@@ -632,6 +663,10 @@ class CrazyTokenizer(object):
             text = EMOJIS_UNICODE_NOSPACE_RE.sub(r'\1 \2', text)
             for utf_code, emoji in EMOJIS_UNICODE.items():
                 text = text.replace(utf_code, emoji)
+
+        if LATIN_CHARS_RE.findall(text):
+            for _hex, _char in LATIN_1_CHARS:
+                text = text.replace(_hex, _char)
 
         text = text.replace('.@', '. @')
         text = re.sub(r'([*;,!?\(\)\[\]])', r' \1', text)
