@@ -515,10 +515,10 @@ class CrazyTokenizer(object):
             found_urls = URLS_RE.findall(tok.text)
             if found_urls:
                 if found_urls[0] in self._domains:
-                    tok._.transformed_text = self._domains[found_urls[0]] + '_domain'
+                    tok._.transformed_text = self._domains[found_urls[0]]
                 elif self._urls == 'domain':
                     tok._.transformed_text = tldextract.extract(
-                        found_urls[0]).domain + '_domain'
+                        found_urls[0]).domain
                 elif self._urls != 'title':
                     if self._urls == 'domain_unwrap':
                         domain = unshorten_url(
@@ -529,7 +529,7 @@ class CrazyTokenizer(object):
                             found_urls[0], URL_SHORTENERS,
                             self.params['print_url_warnings'])
                     self._domains[found_urls[0]] = domain
-                    tok._.transformed_text = domain + '_domain'
+                    tok._.transformed_text = domain
                 elif self._urls == 'title':
                     title = self.tokenize(get_url_title(
                         found_urls[0], self.params['print_url_warnings']))
