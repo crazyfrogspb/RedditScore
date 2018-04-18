@@ -40,6 +40,7 @@ url_text = "I always go to http://rt.com to chat about politics, http://forums.n
 short_url_text = "JOBS, JOBS, JOBS! Unemployment claims have fallen to a 45-year low. https://t.co/pN2TE5HDQm"
 untokenized_text = "Rats are actually more polite in New York City than in Los Angeles"
 annoying_case = 'b@realDonaldTrump@crazyfrogspb crazy@mail.ru #maga#russiago http://fscorelab.ru/overview#scoring'
+hex_text = "I\\xe2\\x80\\x99m so annoyed by these characters \\xF0\\x9F\\x98\\xA2"
 
 
 def test_emoji():
@@ -220,3 +221,10 @@ def test_annoying_case():
     tokens = tokenizer.tokenize(annoying_case)
     assert tokens == ['b', 'HANDLE', 'HANDLE', 'EMAIL', 'maga', 'russia', 'go',
                       'fscorelab']
+
+
+def test_hex():
+    tokenizer = CrazyTokenizer(latin_chars_fix=True)
+    tokens = tokenizer.tokenize(hex_text)
+    assert tokens == ['i', "m", 'so', 'annoyed', 'by', 'these', 'characters',
+                      '😢']

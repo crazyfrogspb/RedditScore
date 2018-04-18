@@ -274,14 +274,13 @@ Removing non-unicode characters
 Emojis
 ^^^^^^^^
 Social media users are notoriously famous for their excessive use of emojis.
-CrazyTokenizer automatically detects emojis even if they are in UTF-8
-(e.g., \\xf0\\x9f\\x94\\xa5) or Unicode (U+1F6BD) formats.
+CrazyTokenizer correctly separates consecutive emojis.
 
 In addition, CrazyTokenizer can replace different kind of emojis with the
 corresponding word tokens.
 
 >>> tokenizer = CrazyTokenizer(pos_emojis=True, neg_emojis=True, neutral_emojis=True)
->>> text = '😍 😭 😩???!!!!'
+>>> text = '😍😭😩???!!!!'
 >>> tokenizer.tokenize(text)
 ['POS_EMOJI', 'NEG_EMOJI', 'NEG_EMOJI']
 
@@ -291,6 +290,15 @@ You can supply your own lists of emojis as well.
 >>> text = '🌮 + 🍔 = 😕'
 >>> tokenizer.tokenize(text)
 ['POS_EMOJI', '+', 'POS_EMOJI', '=', 'NEUTRAL_EMOJI']
+
+Unicode and hex characters
+^^^^^^^^
+Sometimes your data gets messed up as a result of repeated save/load operations.
+If your data contains a lot of substrings that look like this: ``\\xe2\\x80\\x99``
+or this: ``U+1F601``, try setting ``latin_chars_fix=True``.
+
+>>> tokenizer = CrazyTokenizer(latin_chars_fix=True)
+>>> s = "I\\xe2\\x80\\x99m so annoyed by these characters \\xF0\\x9F\\x98\\xA2"
 
 Tokenizing a bunch of documents
 --------------------
