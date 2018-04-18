@@ -36,6 +36,7 @@ def data_to_temp(X, label, y=None):
 
 
 class FastTextClassifier(BaseEstimator, ClassifierMixin):
+    # Auxiliary sklearn-style wrapper for fastText python library
     def __init__(self, lr=0.1,
                  dim=100,
                  ws=5,
@@ -75,6 +76,7 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
         self._num_classes = None
 
     def fit(self, X, y):
+        # Fit model
         if not isinstance(X, np.ndarray):
             X = np.array(X)
         if not isinstance(y, np.ndarray):
@@ -104,6 +106,7 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X):
+        # Return predictions
         docs = [' '.join(doc) for doc in X]
         predictions = self._model.predict(docs, k=1)[0]
         predictions = np.array([pred[0][len(self.label):]
@@ -111,6 +114,7 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
         return predictions
 
     def predict_proba(self, X):
+        # Return predicted probabilities
         docs = [' '.join(doc) for doc in X]
         predictions = zip(*self._model.predict(docs, k=self._num_classes))
         probabilities = []
@@ -123,11 +127,23 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
 
 
 class FastTextModel(redditmodel.RedditModel):
-    """
-    fastText model
+    """Facebook fastText classifier
 
-    Parameters:
+    Parameters
     ----------
+    random_state : int, optional
+        Random seed (the default is 24).
+    **kwargs
+        Other parameters for fastText model.
+        Full description can be found here:
+        https://github.com/facebookresearch/fastText
+
+    Attributes
+    ----------
+    model_type : str
+        Model type name
+    _model : FastTextClassifier
+        sklearn-style wrapper for fastText model
     """
 
     def __init__(self, random_state=24, **kwargs):
@@ -136,12 +152,31 @@ class FastTextModel(redditmodel.RedditModel):
         self._model = FastTextClassifier(**kwargs)
 
     def set_params(self, **params):
-        """
-        Set the parameters of the model.
+        """Set parameters of the model
+
+        Parameters
+        ----------
+        **params
+            Model parameters to update
         """
         self._model.set_params(**params)
 
     def fit(self, X, y):
+        """Fit model
+
+        Parameters
+        ----------
+        X: iterable, shape (n_samples, )
+            Sequence of tokenized documents
+
+        y: iterable, shape (n_samples, )
+            Sequence of labels
+
+        Returns
+        -------
+        FastTextModel
+            Fitted model object
+        """
         self._classes = sorted(np.unique(y))
         self._model.fit(X, y)
         fd, path = tempfile.mkstemp()

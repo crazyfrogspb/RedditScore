@@ -22,8 +22,6 @@ import pandas as pd
 import scipy.cluster.hierarchy as hac
 from adjustText import adjust_text
 from scipy.cluster.hierarchy import fcluster
-from scipy.spatial.distance import cdist, cosine
-from sklearn.cluster import SpectralClustering
 from sklearn.exceptions import NotFittedError
 from sklearn.manifold import TSNE
 from sklearn.metrics import log_loss, make_scorer
@@ -44,6 +42,9 @@ DEFAULT_LEGEND_PARS = {'loc': 'best', 'bbox_to_anchor': (1, 0.5),
 
 
 def fancy_dendrogram(z, labels, **kwargs):
+    # Function to plot fancy dendrograms
+    # Taken from:
+    # https://joernhees.de/blog/2015/08/26/scipy-hierarchical-clustering-and-dendrogram-tutorial/
     max_d = kwargs.pop('max_d', None)
     if max_d and 'color_threshold' not in kwargs:
         kwargs['color_threshold'] = max_d
@@ -91,26 +92,42 @@ def word_ngrams(tokens, ngram_range):
 
 
 class RedditModel(metaclass=ABCMeta):
-    """
-    Sklearn-style wrapper for the different architectures
+    """Sklearn-style wrapper for the different architectures
 
-    random_state: int, optional
-        Random seed
+    Parameters
+    ----------
+    random_state : int, optional
+        Random seed (the default is 24).
+
+    Attributes
+    ----------
+    model_type : str
+        Model type name
+    _model : model object
+        Model object that is being fitted
+    params : dict
+        Dictionary with model parameters
+    _classes : list
+        List of class labels
+    fitted : bool
+        Indicates whether model was fitted
+    class_embeddings : np.array, shape (num_classes, vector_size)
+        Matrix with class embeddings
+    random_state: int
+        Random seed used for validation splits and for models
     """
 
     def __init__(self, random_state=24):
         self.random_state = random_state
         self.model_type = None
         self._model = None
-        self._cv_split = None
         self.params = None
         self._classes = None
         self.fitted = False
         self.class_embeddings = None
 
     def cv_score(self, X, y, cv=0.2, scoring='accuracy'):
-        """
-        Calculate validation score
+        """Calculate validation score
 
         Parameters
         ----------
@@ -143,20 +160,19 @@ class RedditModel(metaclass=ABCMeta):
             train_ind, __ = train_test_split(np.arange(0, X.shape[0]))
             test_fold = np.zeros((X.shape[0], ))
             test_fold[train_ind] = -1
-            self._cv_split = PredefinedSplit(test_fold)
+            cv_split = PredefinedSplit(test_fold)
         else:
-            self._cv_split = check_cv(cv, y=y, classifier=True)
+            cv_split = check_cv(cv, y=y, classifier=True)
 
         if scoring == 'neg_log_loss':
             scoring = make_scorer(log_loss, labels=self._classes,
                                   greater_is_better=False, needs_proba=True)
-        return cross_val_score(self._model, X, y, cv=self._cv_split,
+        return cross_val_score(self._model, X, y, cv=cv_split,
                                scoring=scoring)
 
     def tune_params(self, X, y, param_grid=None,
                     verbose=False, cv=0.2, scoring='accuracy', refit=False):
-        """
-        Find the best values of hyperparameters using chosen validation scheme
+        """Find the best values of hyperparameters using chosen validation scheme
 
         Parameters
         ----------
@@ -249,8 +265,7 @@ class RedditModel(metaclass=ABCMeta):
         return best_pars, best_value
 
     def fit(self, X, y):
-        """
-        Fit model
+        """Fit model
 
         Parameters
         ----------
@@ -259,6 +274,11 @@ class RedditModel(metaclass=ABCMeta):
 
         y: iterable, shape (n_samples, )
             Sequence of labels
+
+        Returns
+        -------
+        RedditModel
+            Fitted model object
         """
         self._classes = sorted(np.unique(y))
         self._model.fit(X, y)
@@ -266,8 +286,7 @@ class RedditModel(metaclass=ABCMeta):
         return self
 
     def predict(self, X):
-        """
-        Predict the most likely label
+        """Predict the most likely label
 
         Parameters
         ----------
@@ -287,8 +306,7 @@ class RedditModel(metaclass=ABCMeta):
         return self._model.predict(X)
 
     def predict_proba(self, X):
-        """
-        Predict the most likely label
+        """Predict the most likely label
 
         Parameters
         ----------
@@ -310,12 +328,21 @@ class RedditModel(metaclass=ABCMeta):
     def get_params(self, deep=None):
         """
         Get parameters of the model
+
+        Returns
+        ----------
+        dict
+            Dictionary with model parameters
         """
         return self.params
 
     def set_params(self, **params):
-        """
-        Set parameters of the model
+        """Set parameters of the model
+
+        Parameters
+        ----------
+        **params
+            Model parameters to update
         """
         self.params.update(params)
 
@@ -323,8 +350,7 @@ class RedditModel(metaclass=ABCMeta):
                        linkage_pars=None, dendrogram_pars=None,
                        clustering_pars=None, tsne_pars=None,
                        legend_pars=None, label_font_size=17):
-        """
-        Plot hieracical clustering dendrogram and T-SNE visualization
+        """Plot hieracical clustering dendrogram and T-SNE visualization
         based on the learned class embeddings
 
         Parameters

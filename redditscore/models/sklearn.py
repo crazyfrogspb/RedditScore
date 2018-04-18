@@ -24,8 +24,7 @@ def build_analyzer(ngrams):
 
 
 class SklearnModel(redditmodel.RedditModel):
-    """
-    SVM and Naive Bayes classifier for multinomial and Bernoulli models
+    """SVM and Naive Bayes classifier for multinomial and Bernoulli models
     with or without tf-idf re-weighting
 
     Parameters
@@ -48,6 +47,11 @@ class SklearnModel(redditmodel.RedditModel):
 
     **kwargs
          Parameters of the corresponding models. For details check scikit-learn documentation.
+
+    Attributes
+    ----------
+    params : dict
+        Dictionary with model parameters
     """
 
     def __init__(self, model_type='multinomial', ngrams=1, tfidf=True, random_state=24, **kwargs):
