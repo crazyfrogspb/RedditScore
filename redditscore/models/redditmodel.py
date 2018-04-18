@@ -15,10 +15,57 @@ import os
 from abc import ABCMeta
 from itertools import product
 
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import scipy.cluster.hierarchy as hac
+from adjustText import adjust_text
+from scipy.cluster.hierarchy import fcluster
+from scipy.spatial.distance import cdist, cosine
+from sklearn.cluster import SpectralClustering
+from sklearn.exceptions import NotFittedError
+from sklearn.manifold import TSNE
 from sklearn.metrics import log_loss, make_scorer
 from sklearn.model_selection import (PredefinedSplit, check_cv,
                                      cross_val_score, train_test_split)
+
+DEFAULT_LINKAGE_PARS = {'method': 'average', 'metric': 'cosine',
+                        'optimal_ordering': True}
+DEFAULT_DENDROGRAM_PARS = {'leaf_font_size': 20, 'max_d': 0.75,
+                           'orientation': 'right', 'distance_sort': True}
+DEFAULT_CLUSTERING_PARS = {'t': 0.75, 'criterion': 'distance'}
+DEFAULT_TSNE_PARS = {'perplexity': 10.0, 'early_exaggeration': 30.0,
+                     'learning_rate': 5.0, 'n_iter': 1000, 'method': 'exact',
+                     'random_state': 24}
+DEFAULT_LEGEND_PARS = {'loc': 'best', 'bbox_to_anchor': (1, 0.5),
+                       'fancybox': True, 'shadow': True, 'labels': [],
+                       'fontsize': 16}
+
+
+def fancy_dendrogram(z, labels, **kwargs):
+    max_d = kwargs.pop('max_d', None)
+    if max_d and 'color_threshold' not in kwargs:
+        kwargs['color_threshold'] = max_d
+    annotate_above = kwargs.pop('annotate_above', 0)
+
+    ddata = hac.dendrogram(z, labels=labels, **kwargs)
+
+    if not kwargs.get('no_plot', False):
+        plt.title('Hierarchical Clustering Dendrogram')
+        plt.xlabel('Class')
+        plt.ylabel('Metric')
+        for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
+            x = 0.5 * sum(i[1:3])
+            y = d[1]
+            if y > annotate_above:
+                plt.plot(x, y, 'o', c=c)
+                plt.annotate("%.3g" % y, (x, y), xytext=(0, -5),
+                             textcoords='offset points',
+                             va='top', ha='center')
+        if max_d:
+            plt.axhline(y=max_d, c='k')
+    return ddata
 
 
 def word_ngrams(tokens, ngram_range):
@@ -58,6 +105,8 @@ class RedditModel(metaclass=ABCMeta):
         self._cv_split = None
         self.params = None
         self._classes = None
+        self.fitted = False
+        self.class_embeddings = None
 
     def cv_score(self, X, y, cv=0.2, scoring='accuracy'):
         """
@@ -213,6 +262,7 @@ class RedditModel(metaclass=ABCMeta):
         """
         self._classes = sorted(np.unique(y))
         self._model.fit(X, y)
+        self.fitted = True
         return self
 
     def predict(self, X):
@@ -268,3 +318,96 @@ class RedditModel(metaclass=ABCMeta):
         Set parameters of the model
         """
         self.params.update(params)
+
+    def plot_analytics(self, classes=None, fig_sizes=((20, 15), (20, 20)),
+                       linkage_pars=None, dendrogram_pars=None,
+                       clustering_pars=None, tsne_pars=None,
+                       legend_pars=None, label_font_size=17):
+        """
+        Plot hieracical clustering dendrogram and T-SNE visualization
+        based on the learned class embeddings
+
+        Parameters
+        ----------
+        classes: iter, optional
+            Iterable, contains list of class labels to include to the plots.
+            If None, use all classes
+
+        fig_sizes: tuple of tuples, optional
+            Figure sizes for plots
+
+        linkage_pars: dict, optional
+            Dictionary of parameters for hieracical clustering.
+            (scipy.cluster.hierarchy.linkage)
+
+        dendrogram_pars: dict, optional
+            Dictionary of parameters for plotting dendrogram.
+            (scipy.cluster.hierarchy.dendrogram)
+
+        clustering_pars: dict, optional
+            Dictionary of parameters for producing flat clusters.
+            (scipy.cluster.hierarchy.fcluster)
+
+        tsne_pars: dict, optional
+            Dictionary of parameters for T-SNE.
+            (sklearn.manifold.TSNE)
+
+        legend_pars: dict, optional
+            Dictionary of parameters for legend plotting
+            (matplotlib.pyplot.legend)
+
+        label_font_size: int, optional
+            Font size for the labels on T-SNE plot
+        """
+        if self.fitted is False:
+            raise NotFittedError('Model is not fitted yet')
+        if self.class_embeddings is None:
+            raise ValueError(
+                'Plotting dendrograms is not available for this class of model')
+        if classes is None:
+            classes = self._classes
+
+        if linkage_pars is None:
+            linkage_pars = DEFAULT_LINKAGE_PARS
+        else:
+            linkage_pars = {**DEFAULT_LINKAGE_PARS, **linkage_pars}
+        if dendrogram_pars is None:
+            dendrogram_pars = DEFAULT_DENDROGRAM_PARS
+        else:
+            dendrogram_pars = {**DEFAULT_DENDROGRAM_PARS, **dendrogram_pars}
+        if clustering_pars is None:
+            clustering_pars = DEFAULT_CLUSTERING_PARS
+        else:
+            clustering_pars = {**DEFAULT_CLUSTERING_PARS, **clustering_pars}
+        if tsne_pars is None:
+            tsne_pars = DEFAULT_TSNE_PARS
+        else:
+            tsne_pars = {**DEFAULT_TSNE_PARS, **tsne_pars}
+        if legend_pars is None:
+            legend_pars = DEFAULT_LEGEND_PARS
+        else:
+            legend_pars = {**DEFAULT_LEGEND_PARS, **legend_pars}
+
+        z = hac.linkage(self.class_embeddings.loc[classes, :], **linkage_pars)
+        plt.figure(figsize=fig_sizes[0])
+        fancy_dendrogram(z, classes, **dendrogram_pars)
+
+        clusters = fcluster(z, **clustering_pars) - 1
+        df_clust = pd.DataFrame({'classes': classes, 'cluster': clusters})
+        num_cl = len(df_clust.cluster.unique())
+        numdocvec = len(classes)
+        tsne = TSNE(n_components=2, **tsne_pars)
+        Y = tsne.fit_transform(self.class_embeddings.loc[classes, :])
+        fig, ax = plt.subplots(figsize=fig_sizes[1])
+        colors = cm.jet(np.linspace(0, 1, num_cl))
+        for i in range(num_cl):
+            ax.plot(Y[clusters == i, 0], Y[clusters == i, 1],
+                    marker='o', linestyle='', color=colors[i])
+        ax.margins(0.05)
+        ax.legend(**legend_pars)
+        texts = []
+        for i in range(len(classes)):
+            texts.append(plt.text(Y[i, 0], Y[i, 1], classes[i],
+                                  fontsize=label_font_size))
+        adjust_text(texts, arrowprops=dict(
+            arrowstyle="-", color='black', lw=0.55))

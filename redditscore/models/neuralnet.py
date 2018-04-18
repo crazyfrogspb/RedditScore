@@ -46,7 +46,6 @@ class MLPModel(redditmodel.RedditModel):
             model.add(Embedding(self._vocab_size, self.dim,
                                 weights=[self.weights], trainable=False))
 
-        weights = [weights], trainable = train_embeddings
         model.add(Dense(layer_sizes[0], input_shape=(dim, )))
         for i in range(n_layers):
 

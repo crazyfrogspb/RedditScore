@@ -73,7 +73,6 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
 
         self._model = None
         self._num_classes = None
-        self.class_embeddings = None
 
     def fit(self, X, y):
         if not isinstance(X, np.ndarray):
@@ -101,11 +100,6 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
                                                 t=self.t,
                                                 label=self.label,
                                                 verbose=self.verbose)
-        os.remove(path)
-        fd, path = tempfile.mkstemp()
-        self._model.save_softmax(path)
-        self.class_embeddings = pd.read_csv(
-            path, skiprows=[0], delimiter=' ').dropna(axis=1)
         os.remove(path)
         return self
 
@@ -146,3 +140,17 @@ class FastTextModel(redditmodel.RedditModel):
         Set the parameters of the model.
         """
         self._model.set_params(**params)
+
+    def fit(self, X, y):
+        self._classes = sorted(np.unique(y))
+        self._model.fit(X, y)
+        fd, path = tempfile.mkstemp()
+        self._model._model.save_softmax(path)
+        emb = pd.read_csv(
+            path, skiprows=[0], delimiter=' ', header=None).dropna(axis=1)
+        emb.iloc[:, 0] = emb.iloc[:, 0].str[len(self._model.label):]
+        emb.set_index(0, inplace=True)
+        self.class_embeddings = emb
+        os.remove(path)
+        self.fitted = True
+        return self
