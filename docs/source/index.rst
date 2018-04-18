@@ -12,6 +12,7 @@ Contents:
 
    RedditScore Overview <overview>
    Tokenizing <tokenizing>
+   Data Collection <data_collection>
    API Documentation <apis/api_main>
 
 
