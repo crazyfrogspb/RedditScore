@@ -156,7 +156,7 @@ def get_url_title(url, verbose=False):
     try:
         response = request.urlopen(url, timeout=TIMEOUT)
         soup = BeautifulSoup(response, "html5lib")
-    except (ValueError, HTTPError, URLError, timeout):
+    except (ValueError, ConnectionResetError, HTTPError, URLError, timeout):
         if verbose:
             warnings.warn("Couldn't extract title from url {}".format(url))
         return tldextract.extract(url).domain

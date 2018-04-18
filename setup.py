@@ -15,7 +15,7 @@ except Exception:
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
-    INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.10", "tldextract>=2.1.0", "requests>=2.18.0",
+    INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.11", "tldextract>=2.1.0", "requests>=2.18.0",
                         "scikit-learn>=0.19.0", "pandas>=0.22.0", "Cython", "scipy>=1.0.0", "numpy>=1.14.0",
                         "matplotlib>=2.2.0", "beautifulsoup4>=4.6.0", "pandas-gbq>=0.4.1",
                         "adjustText>=0.6.3"]
@@ -34,7 +34,7 @@ with open('LICENSE') as f:
 
 setup(
     name='redditscore',
-    version='0.4.0',
+    version='0.5.0',
     description='Package for performing Reddit-based text analysis',
     long_description=readme,
     author='Evgenii Nikitin',
