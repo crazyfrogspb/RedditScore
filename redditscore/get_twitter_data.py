@@ -178,7 +178,7 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
                          " consumer_secret, access_key, and access_secret keys"))
 
     if fields is None:
-        fields = ['created_at']
+        fields = []
     if start_date is None:
         start_date = datetime.date(year=2016, month=1, day=1)
 
