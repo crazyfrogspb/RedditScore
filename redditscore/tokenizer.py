@@ -577,9 +577,13 @@ class CrazyTokenizer(object):
                     self._domains[found_urls[0]] = domain
                     tok._.transformed_text = domain
                 elif self._urls == 'title':
-                    title = get_url_title(
-                        found_urls[0], self.params['print_url_warnings'])
-                    title = self.tokenize(URLS_RE.sub('', title))
+                    domain = unshorten_url(found_urls[0], URL_SHORTENERS)
+                    if domain != 'twitter':
+                        title = get_url_title(
+                            found_urls[0], self.params['print_url_warnings'])
+                        title = self.tokenize(URLS_RE.sub('', title))
+                    else:
+                        title = ''
                     tok._.transformed_text = title
                     self._domains[found_urls[0]] = title
 

@@ -214,7 +214,8 @@ If you want, CrazyTokenizer can attempt to unwrap ALL extracted URLs.
 ['where', 'is', 'my', 'job', 'then', 'bloomberg_domain']
 
 Last but not least, CrazyTokenizer can extract web page titles, tokenize them,
-and insert to your tokenized sentences.
+and insert to your tokenized sentences. Note: it won't extract titles from the
+Twitter pages in order to avoid duplicating tweets content.
 
 >>> tokenizer = CrazyTokenizer(urls='title')
 >>> text = "I love Russia https://goo.gl/3ioXU4"
