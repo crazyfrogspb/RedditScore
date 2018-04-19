@@ -29,7 +29,7 @@ except ImportError:
                    ' 3200 limit will be unavailable'))
 
 
-def format_day(date):
+def _format_day(date):
     # convert date to required format
     day = '0' + str(date.day) if len(str(date.day)) == 1 else str(date.day)
     month = '0' + str(date.month) if len(str(date.month)
@@ -38,7 +38,7 @@ def format_day(date):
     return '-'.join([year, month, day])
 
 
-def form_url(since, until, user):
+def _form_url(since, until, user):
     # create url request
     p1 = 'https://twitter.com/search?f=tweets&vertical=default&q=from%3A'
     p2 = user + '%20since%3A' + since + '%20until%3A' + \
@@ -46,12 +46,12 @@ def form_url(since, until, user):
     return p1 + p2
 
 
-def increment_day(date, i):
+def _increment_day(date, i):
     # increment date by i days
     return date + datetime.timedelta(days=i)
 
 
-def grab_tweet_by_ids(ids, api, delay=6.0):
+def _grab_tweet_by_ids(ids, api, delay=6.0):
     # grab tweets by ids
     full_tweets = []
     start = 0
@@ -70,7 +70,7 @@ def grab_tweet_by_ids(ids, api, delay=6.0):
     return full_tweets
 
 
-def grab_even_more_tweets(screen_name, dates, browser, delay=1.0):
+def _grab_even_more_tweets(screen_name, dates, browser, delay=1.0):
     # grab tweets beyond 3200 limit
     startdate, enddate = dates
 
@@ -98,9 +98,9 @@ def grab_even_more_tweets(screen_name, dates, browser, delay=1.0):
     ids = []
 
     for day in range(days):
-        d1 = format_day(increment_day(startdate, 0))
-        d2 = format_day(increment_day(startdate, 1))
-        url = form_url(d1, d2, screen_name)
+        d1 = _format_day(_increment_day(startdate, 0))
+        d2 = _format_day(_increment_day(startdate, 1))
+        url = _form_url(d1, d2, screen_name)
         driver.get(url)
         sleep(delay)
 
@@ -126,7 +126,7 @@ def grab_even_more_tweets(screen_name, dates, browser, delay=1.0):
         except NoSuchElementException:
             pass
 
-        startdate = increment_day(startdate, 1)
+        startdate = _increment_day(startdate, 1)
 
     return ids
 
@@ -203,8 +203,8 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
         end_date = alltweets[-1].created_at.date()
         if end_date > start_date:
             dates = (start_date, end_date)
-            ids = grab_even_more_tweets(screen_name, dates, browser)
-            tweets = grab_tweet_by_ids(ids, api)
+            ids = _grab_even_more_tweets(screen_name, dates, browser)
+            tweets = _grab_tweet_by_ids(ids, api)
             alltweets.extend(tweets)
 
     full_tweets = []
