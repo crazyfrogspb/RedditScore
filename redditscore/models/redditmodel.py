@@ -234,8 +234,7 @@ class RedditModel(metaclass=ABCMeta):
             except KeyError:
                 raise KeyError('Step{} is not in the grid'.format(step))
 
-            if not isinstance(current_grid, list):
-                current_grid = [current_grid]
+            current_grid = [current_grid]
 
             for param_combination in current_grid:
                 items = sorted(param_combination.items())
