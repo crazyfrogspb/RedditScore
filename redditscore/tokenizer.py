@@ -20,9 +20,10 @@ from collections import OrderedDict
 from http import client
 from math import log
 from socket import gaierror, timeout
-from urllib import parse, request
+from urllib import parse
 from urllib.error import HTTPError, URLError
 
+import requests
 import tldextract
 from bs4 import BeautifulSoup
 from spacy.lang.en import English
@@ -39,7 +40,7 @@ except ImportError:
 Token.set_extension('transformed_text', default='', force=True)
 Doc.set_extension('tokens', default='', force=True)
 
-TIMEOUT = 0.5
+TIMEOUT = 3.0
 
 
 POS_EMOJIS = [u'😂', u'❤', u'♥', u'😍', u'😘', u'😊', u'👌', u'💕',
@@ -154,15 +155,28 @@ def unshorten_url(url, url_shorteners=None, verbose=False):
 
 def get_url_title(url, verbose=False):
     try:
-        response = request.urlopen(url, timeout=TIMEOUT)
-        soup = BeautifulSoup(response, "html5lib")
-    except (ValueError, ConnectionResetError, HTTPError, URLError, timeout):
+        response = requests.get(url, timeout=TIMEOUT)
+    except Exception:
         if verbose:
             warnings.warn("Couldn't extract title from url {}".format(url))
-        return tldextract.extract(url).domain
+        return ''
+    try:
+        soup = BeautifulSoup(response.text, "lxml")
+    except ValueError:
+        return ''
     if soup.title is None:
         return ''
     return soup.title.string
+
+
+def get_twitter_realname(twitter_handle):
+    response = requests.get('https://twitter.com/' + twitter_handle)
+    soup = BeautifulSoup(response.text, "lxml")
+    realname = soup.title.text.split('(')[0]
+    if 'Twitter' in realname:
+        return ''
+    else:
+        return realname
 
 
 class CrazyTokenizer(object):
@@ -222,13 +236,20 @@ class CrazyTokenizer(object):
 
         Note: it will not do anything if "hashtags" argument is not False
 
-    twitter_handles, hashtags, numbers, subreddits, reddit_usernames, emails:
+    hashtags, numbers, subreddits, reddit_usernames, emails:
     False or str, optional
         Replacement of the different types of tokens
 
         - False: leaves these tokens intact
         - str: replacement token
         - '': removes all occurrences of these tokens
+
+    twitter_handles: False, 'realname' or str, optional
+        Replacement of twitter handles
+
+        - False: do nothing
+        - str: replacement token
+        - 'realname': replace with the real screen name of Twitter account
 
     urls: False or str, optional
         Replacement of parsed URLs
@@ -300,6 +321,7 @@ class CrazyTokenizer(object):
 
         self._replacements = {}
         self._domains = {}
+        self._realnames = {}
         self._stopwords = None
 
         alpha_digits_flag = self._nlp.vocab.add_flag(alpha_digits_check)
@@ -384,9 +406,13 @@ class CrazyTokenizer(object):
             self._replacements['EMAIL'] = emails
 
         if twitter_handles is not False:
-            self._matcher.add('TWITTER_HANDLE', self._replace_token, [
-                {twitter_handle_flag: True}])
-            self._replacements['TWITTER_HANDLE'] = twitter_handles
+            if twitter_handles != 'realname':
+                self._matcher.add('TWITTER_HANDLE', self._replace_token, [
+                    {twitter_handle_flag: True}])
+                self._replacements['TWITTER_HANDLE'] = twitter_handles
+            else:
+                self._matcher.add('TWITTER_HANDLE', self._get_realname, [
+                    {twitter_handle_flag: True}])
 
         if reddit_usernames is not False:
             def reddit_username_check(text):
@@ -548,10 +574,24 @@ class CrazyTokenizer(object):
                     self._domains[found_urls[0]] = domain
                     tok._.transformed_text = domain
                 elif self._urls == 'title':
-                    title = self.tokenize(get_url_title(
-                        found_urls[0], self.params['print_url_warnings']))
+                    title = get_url_title(
+                        found_urls[0], self.params['print_url_warnings'])
+                    title = self.tokenize(URLS_RE.sub('', title))
                     tok._.transformed_text = title
                     self._domains[found_urls[0]] = title
+
+    def _get_realname(self, __, doc, i, matches):
+        # get real name from the twitter handle
+        __, start, end = matches[i]
+        span = doc[start:end]
+        for tok in span:
+            if tok.text in self._realnames:
+                tok._.transformed_text = self._realnames[tok.text]
+            else:
+                realname = self.tokenize(
+                    get_twitter_realname(tok.text))
+                tok._.transformed_text = realname
+                self._realnames[tok.text] = realname
 
     def _replace_token(self, __, doc, i, matches):
         # Replace tokens with something else

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "13b827fcf7a8994bd46c186a166212c74e0143a1318d4766d6b2a90bbf395979"
+            "sha256": "30900e1c37438d3f7b30d2d4b3287db8d8fa89cb2b2dbc33dd643e001a84da42"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -202,10 +202,10 @@
         },
         "google-api-core": {
             "hashes": [
-                "sha256:7618a9c2ee84c0d99f9c7823675c15024b25094bb920f49d204a72107d856aac",
-                "sha256:b4f103de6bd38ab346f7d17236f6098a51ebdff733ff69956a0f1e29cb35f10b"
+                "sha256:4885e5298e45aa587185c32bee54f95e79a05a926d69fcfd398c66b12b98b9a7",
+                "sha256:d23d5ae89e44ca1ddddec94e5f7c03f52402d192e66345d448b77ad5276b0fbe"
             ],
-            "version": "==1.1.0"
+            "version": "==1.1.1"
         },
         "google-auth": {
             "hashes": [
@@ -223,10 +223,10 @@
         },
         "google-cloud-bigquery": {
             "hashes": [
-                "sha256:49a0eda0e41a236d3986db69d4a7bb31370908f98ee98c0ef16e72f6bd0e2e3b",
-                "sha256:593cc03a06f88cccd9c73a10610145e23229e07e2b97c613995968a2efbe7362"
+                "sha256:44d152e1de60cce8fe9d4f5c60ca4cebc88daab02b4d889bb0ebfcc19d54d7ec",
+                "sha256:aed2b1d4db1e21d891522d6d6bb14476e6ba58c681cbb68eeb42c168a4e3fda9"
             ],
-            "version": "==1.0.0"
+            "version": "==1.1.0"
         },
         "google-cloud-core": {
             "hashes": [
@@ -655,6 +655,12 @@
             ],
             "version": "==2.2.0"
         },
+        "pysocks": {
+            "hashes": [
+                "sha256:3fe52c55890a248676fd69dc9e3c4e811718b777834bcaab7a8125cf9deac672"
+            ],
+            "version": "==1.6.8"
+        },
         "python-dateutil": {
             "hashes": [
                 "sha256:891c38b2a02f5bb1be3e4793866c8df49c7d19baabf9c1bad62547e0b4866aca",
@@ -810,6 +816,14 @@
             "index": "pypi",
             "version": "==1.0.1"
         },
+        "selenium": {
+            "hashes": [
+                "sha256:2b6f018e55f50e9c67a67caec2f73f806f72c162fb38cf3ea79e0a8f6506bf56",
+                "sha256:5841fb30c3965866220c34d16de8e3d091e2833fcac385160a63db0c3522a297"
+            ],
+            "index": "pypi",
+            "version": "==3.11.0"
+        },
         "simplegeneric": {
             "hashes": [
                 "sha256:dc972e06094b9af5b855b3df4a646395e43d1c9d0d39ed345b7393560d0b9173"
@@ -913,6 +927,14 @@
                 "sha256:c6cb5e6f57c5a9bdaa40fa71ce7b4af30298fbab9ece9815b5d995ab6217c7d9"
             ],
             "version": "==4.3.2"
+        },
+        "tweepy": {
+            "hashes": [
+                "sha256:0895e79fe98127787c8debb62c283cb876e8b65fbbcf90cb988dba2c606f6260",
+                "sha256:901500666de5e265d93e611dc05066bb020481c85550d6bcbf8030212938902c"
+            ],
+            "index": "pypi",
+            "version": "==3.6.0"
         },
         "ujson": {
             "hashes": [

@@ -23,6 +23,8 @@ pandas-gbq = "*"
 adjusttext = "*"
 scipy = "*"
 gensim = "*"
+tweepy = "*"
+selenium = "*"
 
 [requires]
 python_version = "3.5"

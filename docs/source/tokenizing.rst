@@ -163,6 +163,13 @@ Well, it's your lucky day, CrazyTokenizer can do that!
 >>> tokenizer.tokenize(text)
 ['ANOTHER_TWITTER_USER', 'recommends']
 
+There is a special option for Twitter handles: 'realname'. It replaces each
+handle with the screen name of the user that is listed in their profile.
+
+>>> tokenizer = CrazyTokenizer(splithashtags=True, twitter_handles='realname')
+>>> tokenizer.tokenize('@realDonaldTrump please #MakeAmericaGreatAgain')
+['donald', 'j.', 'trump', 'please', 'make', 'america', 'great', 'again']
+
 URLs
 ^^^^^^^^
 NLP practicioners often simply remove all URL occurrences since they do not
