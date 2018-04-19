@@ -582,7 +582,6 @@ class CrazyTokenizer(object):
                     if domain != 'twitter':
                         title = get_url_title(
                             found_urls[0], self.params['print_url_warnings'])
-                        print(title)
                         title = self.tokenize(URLS_RE.sub('', title))
                     else:
                         title = ''
