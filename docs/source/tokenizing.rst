@@ -24,9 +24,11 @@ preprocessing options, do the following:
 
 Now you can start tokenizing!
 
->>> text = "@crazyfrogspb Hey,dude, have you heard that https://github.com/crazyfrogspb/RedditScore is the best Python library?"
+>>> text = ("@crazyfrogspb Hey,dude, have you heard that"
+>>>         " https://github.com/crazyfrogspb/RedditScore is the best Python library?")
 >>> tokenizer.tokenizer(text)
-['@crazyfrogspb', 'hey', 'dude', 'have', 'you', 'heard', 'that', 'https://github.com/crazyfrogspb/RedditScore', 'is', 'the', 'best', 'python', 'library']
+['@crazyfrogspb', 'hey', 'dude', 'have', 'you', 'heard', 'that',
+'https://github.com/crazyfrogspb/RedditScore', 'is', 'the', 'best', 'python', 'library']
 
 Features
 --------------------
