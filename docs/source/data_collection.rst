@@ -62,6 +62,7 @@ You can do it in `Application Management <https://apps.twitter.com/>`__. Save
 your consumer_key, consumer_secret, access_key, and access_secret to JSON file,
 and you're ready to collect the data!
 
+>>> import json
 >>> from redditscore import get_twitter_data as gtd
 >>> cred_path = 'twitter_creds.json'
 >>> with open(cred_path) as f:

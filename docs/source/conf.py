@@ -36,7 +36,7 @@ MOCK_MODULES = ["requests", "tldextract", "spacy.lang.en", "spacy.matcher",
                 "spacy.tokenizer", "spacy.tokens", "numpy", "sklearn.metrics", "sklearn.model_selection",
                 "sklearn.feature_extraction.text", "sklearn.naive_bayes", "sklearn.pipeline",
                 "sklearn.svm", "fastText", "sklearn.base", "keras", "requests.exceptions",
-                "spacy.lang", "beautifulsoup4", "beautifulsoup4.BeautifulSoup"]
+                "spacy.lang", "beautifulsoup4", "beautifulsoup4.BeautifulSoup", "selenium"]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
