@@ -29,6 +29,8 @@ from urllib.error import HTTPError, URLError
 import requests
 import tldextract
 from bs4 import BeautifulSoup
+from eventlet.green.urllib.request import urlopen
+from eventlet.timeout import Timeout
 from spacy.lang.en import English
 from spacy.matcher import Matcher
 from spacy.tokens import Doc, Token
@@ -122,9 +124,9 @@ def retokenize_check(text):
 
 
 def batch(iterable, n=1):
-    l = len(iterable)
+    length = len(iterable)
     for ndx in range(0, l, n):
-        yield iterable[ndx:min(ndx + n, l)]
+        yield iterable[ndx:min(ndx + n, length)]
 
 
 def unshorten_url(url, url_shorteners=None, verbose=False):
@@ -157,17 +159,16 @@ def unshorten_url(url, url_shorteners=None, verbose=False):
 
 
 def get_url_title(url, verbose=False):
+    soup = None
     try:
-        response = requests.get(url, timeout=TIMEOUT)
+        with Timeout(TIMEOUT, False):
+            response = urlopen(url)
+            soup = BeautifulSoup(response, "lxml")
     except Exception:
         if verbose:
             warnings.warn("Couldn't extract title from url {}".format(url))
         return ''
-    try:
-        soup = BeautifulSoup(response.text, "lxml")
-    except ValueError:
-        return ''
-    if soup.title is None or soup.title.string is None:
+    if soup is None or soup.title is None or soup.title.string is None:
         return ''
     return soup.title.string
 
@@ -581,6 +582,7 @@ class CrazyTokenizer(object):
                     if domain != 'twitter':
                         title = get_url_title(
                             found_urls[0], self.params['print_url_warnings'])
+                        print(title)
                         title = self.tokenize(URLS_RE.sub('', title))
                     else:
                         title = ''
