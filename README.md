@@ -37,9 +37,9 @@ To install package:
 If you want to be able all features of the library, also install these
 dependencies:
 
-  pip install Cython selenium keras tensorflow tensorflow-gpu nltk pandas-gbq
-  pip install git+https://github.com/walmsley/tweepy.git@patch-1
-  pip install git+https://github.com/crazyfrogspb/fastText.git
+	pip install Cython selenium keras tensorflow tensorflow-gpu nltk pandas-gbq
+	pip install git+https://github.com/walmsley/tweepy.git@patch-1
+	pip install git+https://github.com/crazyfrogspb/fastText.git
 
 - Cython, fasttext - for training fastText models
 - keras, tensorflow, tensorflow-gpu - for training neural networks
