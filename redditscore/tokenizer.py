@@ -2,6 +2,9 @@
 """
 CrazyTokenizer: spaCy-based tokenizer with Twitter- and Reddit-specific features
 
+Splitting hashtags is based on the idea from
+https://stackoverflow.com/questions/11576779/how-to-extract-literal-words-from-a-consecutive-string-efficiently
+
 Author: Evgenii Nikitin <e.nikitin@nyu.edu>
 
 Part of https://github.com/crazyfrogspb/RedditScore project
