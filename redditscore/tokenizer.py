@@ -167,7 +167,7 @@ def get_url_title(url, verbose=False):
         soup = BeautifulSoup(response.text, "lxml")
     except ValueError:
         return ''
-    if soup.title is None:
+    if soup.title is None or soup.title.string is None:
         return ''
     return soup.title.string
 
