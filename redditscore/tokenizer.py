@@ -595,8 +595,8 @@ class CrazyTokenizer(object):
             if tok.text in self._realnames:
                 tok._.transformed_text = self._realnames[tok.text]
             else:
-                realname = self.tokenize(
-                    get_twitter_realname(tok.text))
+                handle = get_twitter_realname(tok.text)
+                realname = self.tokenize(TWITTER_HANDLES_RE.sub('', handle))
                 tok._.transformed_text = realname
                 self._realnames[tok.text] = realname
 
