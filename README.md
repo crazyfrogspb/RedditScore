@@ -38,7 +38,7 @@ If you want to be able all features of the library, also install these
 dependencies:
 
 	pip install Cython pybind11 selenium keras tensorflow tensorflow-gpu nltk pandas-gbq
-	pip install git+https://github.com/walmsley/tweepy.git@patch-1
+	pip install git+https://github.com/crazyfrogspb/tweepy.git
 	pip install git+https://github.com/crazyfrogspb/fastText.git
 
 - Cython, pybind11, fasttext - for training fastText models

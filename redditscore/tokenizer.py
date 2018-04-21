@@ -176,7 +176,10 @@ def get_url_title(url, verbose=False):
 def get_twitter_realname(twitter_handle):
     response = requests.get('https://twitter.com/' + twitter_handle)
     soup = BeautifulSoup(response.text, "lxml")
-    realname = soup.title.text.split('(')[0]
+    if soup.title is not None:
+        realname = soup.title.text.split('(')[0]
+    else:
+        realname = ''
     if 'Twitter' in realname:
         return ''
     else:

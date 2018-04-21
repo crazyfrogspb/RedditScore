@@ -10,6 +10,8 @@ Copyright (c) 2018 Evgenii Nikitin. All rights reserved.
 This work is licensed under the terms of the MIT license.
 """
 
+import pickle
+
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.naive_bayes import BernoulliNB, MultinomialNB
 from sklearn.pipeline import Pipeline
@@ -18,7 +20,26 @@ from sklearn.svm import SVC
 from . import redditmodel
 
 
-def build_analyzer(ngrams):
+def load_model(filepath):
+    """Loan pickled instance of SklearnModel.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to the pickled model file.
+
+    Returns
+    -------
+    SklearnModel
+        Unpickled model.
+
+    """
+    with open(filepath, 'rb') as f:
+        model = pickle.load(f)
+    return model
+
+
+def _build_analyzer(ngrams):
     # Build analyzer for vectorizers for a given ngram range
     return lambda doc: redditmodel.word_ngrams(doc, (1, ngrams))
 
@@ -88,11 +109,23 @@ class SklearnModel(redditmodel.RedditModel):
 
         if self.tfidf:
             vectorizer = TfidfVectorizer(
-                analyzer=build_analyzer(self.ngrams))
+                analyzer=_build_analyzer(self.ngrams))
         else:
             vectorizer = CountVectorizer(
-                analyzer=build_analyzer(self.ngrams))
+                analyzer=_build_analyzer(self.ngrams))
 
         self._model = Pipeline([('vectorizer', vectorizer), ('model', model)])
 
         return self
+
+    def save_model(self, filepath):
+        """Save model to disk.
+
+        Parameters
+        ----------
+        filepath : str
+            Path to file where the model will be sabed.
+
+        """
+        with open(filepath, 'wb') as f:
+            pickle.dump(self, filepath)

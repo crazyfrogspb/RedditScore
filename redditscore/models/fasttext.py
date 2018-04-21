@@ -11,6 +11,7 @@ This work is licensed under the terms of the MIT license.
 """
 
 import os
+import pickle
 import tempfile
 import warnings
 
@@ -22,7 +23,30 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from . import redditmodel
 
 
-def data_to_temp(X, label, y=None):
+def load_model(filepath):
+    """Load pickled model.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to the file where the model will be saved. NOTE: the
+        directory has to contain two files with provided name:
+        with '.pkl' and 'bin' file extensions.
+
+    Returns
+    -------
+    FastTextModel
+        Unpickled model object.
+
+    """
+    with open(os.path.splitext(filepath)[0] + '.pkl', 'wb') as f:
+        model = pickle.load(f)
+    model._model._model = fastText.load_model(
+        os.path.splitext(filepath)[0] + '.bin')
+    return model
+
+
+def _data_to_temp(X, label, y=None):
     # Generate temorary file
     fd, path = tempfile.mkstemp()
     with os.fdopen(fd, 'w') as tmp:
@@ -82,7 +106,7 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
         if not isinstance(y, np.ndarray):
             y = np.array(y)
 
-        path = data_to_temp(X, self.label, y)
+        path = _data_to_temp(X, self.label, y)
         self._num_classes = len(np.unique(y))
         self._model = fastText.train_supervised(path,
                                                 lr=self.lr,
@@ -189,3 +213,18 @@ class FastTextModel(redditmodel.RedditModel):
         os.remove(path)
         self.fitted = True
         return self
+
+    def save_model(self, filepath):
+        """Save model to disk.
+
+        Parameters
+        ----------
+        filepath : str
+            Path to the file where the model will be saved. NOTE:
+            The model will be saved in two files: with '.pkl' and 'bin'
+            file extensions.
+
+        """
+        with open(os.path.splitext(filepath)[0] + '.pkl', 'wb') as f:
+            pickle.dump(self, f)
+        self._model._model.save_model(os.path.splitext(filepath)[0] + '.bin')
