@@ -39,9 +39,9 @@ dependencies:
 
 	pip install Cython pybind11 selenium keras tensorflow tensorflow-gpu nltk pandas-gbq
 	pip install git+https://github.com/crazyfrogspb/tweepy.git
-  git clone git+https://github.com/crazyfrogspb/fastText.git
-  cd fastText
-  pip install .
+	git clone git+https://github.com/crazyfrogspb/fastText.git
+	cd fastText
+	pip install .
 
 - Cython, pybind11, fasttext - for training fastText models
 - keras, tensorflow, tensorflow-gpu - for training neural networks
