@@ -48,6 +48,7 @@ def construct_query(subreddits, month, score_limit):
         AND body NOT LIKE '%performed automatically%'
         AND body NOT LIKE '%bot action performed%'
         AND body NOT LIKE '%autowikibot%'
+        AND body NOT LIKE '%I am a bot%'
         AND LENGTH(body) > 0""" + score
     return query
 
@@ -91,6 +92,7 @@ def construct_sample_score_query(subreddits, month, sample_size, score_limit):
             AND body NOT LIKE '%performed automatically%'
             AND body NOT LIKE '%bot action performed%'
             AND body NOT LIKE '%autowikibot%'
+            AND body NOT LIKE '%I am a bot%'
             AND LENGTH(body) > 0""" + score + """
     )
     WHERE pos <= """ + str(sample_size)
@@ -137,6 +139,7 @@ def construct_sample_query(subreddits, month, sample_size, score_limit):
             AND body NOT LIKE '%performed automatically%'
             AND body NOT LIKE '%bot action performed%'
             AND body NOT LIKE '%autowikibot%'
+            AND body NOT LIKE '%I am a bot%'
             AND LENGTH(body) > 0""" + score + """
     )
     WHERE pos <= """ + str(sample_size)
@@ -145,7 +148,7 @@ def construct_sample_query(subreddits, month, sample_size, score_limit):
 
 def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
                  comments_per_month=None, top_scores=False,
-                 csv_directory=None, verbose=False):
+                 csv_directory=None, verbose=False, configuration=None):
     """
     Obtain Reddit comments using Google BigQuery
 
@@ -182,6 +185,9 @@ def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
 
     verobse: bool, optional
         If True, print the name of the table, which is being queried.
+
+    configuration: dict,  optional
+        Query config parameters for job processing.
 
     Returns
     ----------
@@ -231,10 +237,15 @@ def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
             query = construct_sample_query(
                 subreddits, table_name, comments_per_month, score_limit)
         df = gbq.read_gbq(query, project_id=project_id,
-                          private_key=private_key)
+                          private_key=private_key, configuration=configuration)
         if csv_directory is None:
             dfs.append(df)
         else:
-            df.to_csv(os.path.join(csv_directory,
-                                   table_name + '.csv'), index=False)
+            filename = os.path.join(csv_directory, table_name + '.csv')
+            if os.path.isfile(filename):
+                with open(filename, 'a') as f:
+                    df.to_csv(f, header=False, index=False)
+            else:
+                df.to_csv(os.path.join(csv_directory, table_name + '.csv'),
+                          index=False)
     return dfs
