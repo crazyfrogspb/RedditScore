@@ -280,7 +280,9 @@ class RedditModel(metaclass=ABCMeta):
         RedditModel
             Fitted model object
         """
-        self._classes = sorted(np.unique(y))
+        self._classes = np.array(sorted(np.unique(y)))
+        X = np.array(X)
+        y = np.array(y)
         self._model.fit(X, y)
         self.fitted = True
         return self
@@ -324,8 +326,7 @@ class RedditModel(metaclass=ABCMeta):
         """
         if not self.fitted:
             raise NotFittedError('Model has to be fitted first')
-        if not isinstance(X, np.ndarray):
-            X = np.array(X)
+        X = np.array(X)
         return self._model.predict_proba(X)
 
     def get_params(self, deep=None):

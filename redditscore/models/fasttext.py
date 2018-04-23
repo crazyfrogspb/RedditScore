@@ -18,6 +18,7 @@ import warnings
 import fastText
 import numpy as np
 import pandas as pd
+from scipy.spatial.distance import cdist
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.preprocessing import MinMaxScaler
@@ -214,7 +215,9 @@ class FastTextModel(redditmodel.RedditModel):
         FastTextModel
             Fitted model object
         """
-        self._classes = sorted(np.unique(y))
+        X = np.array(X)
+        y = np.array(y)
+        self._classes = np.array(sorted(np.unique(y)))
         self._model.fit(X, y)
         fd, path = tempfile.mkstemp()
         self._model._model.save_softmax(path)
@@ -223,7 +226,7 @@ class FastTextModel(redditmodel.RedditModel):
         emb = emb.round(decimals=5)
         emb[0] = emb[0].str[len(self._model.label):]
         emb.set_index(0, inplace=True)
-        self.class_embeddings = emb
+        self.class_embeddings = emb.loc[self._classes]
         os.remove(path)
         self.fitted = True
         self.raw_scores(X)
@@ -232,11 +235,10 @@ class FastTextModel(redditmodel.RedditModel):
     def raw_scores(self, X):
         if not self.fitted:
             raise NotFittedError('Model has to be fitted first')
-        docs = [' '.join(doc) for doc in X]
-        doc_vectors = np.zeros((len(X), self._model.dim))
+        docs = np.array([' '.join(doc) for doc in X])
+        doc_vectors = np.zeros((len(docs), self._model.dim))
         for i, doc in enumerate(docs):
-            doc_vectors[i] = self._model._model.get_sentence_vector(doc)
-        # scores = np.dot(doc_vectors, self.class_embeddings.values.transpose())
+            doc_vectors[i, :] = self._model._model.get_sentence_vector(doc)
         scores = chunking_dot(
             doc_vectors, self.class_embeddings.values.transpose())
         if self._score_scaler:
@@ -245,6 +247,17 @@ class FastTextModel(redditmodel.RedditModel):
             self._score_scaler = MinMaxScaler(feature_range=(0, 100))
             scaled_scores = self._score_scaler.fit_transform(scores)
         return pd.DataFrame(scaled_scores, columns=self._classes)
+
+    def cosine_sims(self, X):
+        if not self.fitted:
+            raise NotFittedError('Model has to be fitted first')
+        docs = np.array([' '.join(doc) for doc in X])
+        doc_vectors = np.zeros((len(docs), self._model.dim))
+        for i, doc in enumerate(docs):
+            doc_vectors[i, :] = self._model._model.get_sentence_vector(doc)
+        sims = 1 - cdist(doc_vectors, self.class_embeddings.values,
+                         metric='cosine')
+        return pd.DataFrame(sims, columns=self._classes)
 
     def save_model(self, filepath):
         """Save model to disk.
