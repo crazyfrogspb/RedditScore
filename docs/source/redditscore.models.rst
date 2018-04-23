@@ -4,6 +4,14 @@ redditscore.models package
 Submodules
 ----------
 
+redditscore.models.doc2vec module
+---------------------------------
+
+.. automodule:: redditscore.models.doc2vec
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 redditscore.models.fasttext module
 ----------------------------------
 
