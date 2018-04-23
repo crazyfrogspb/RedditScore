@@ -124,7 +124,7 @@ class SklearnModel(redditmodel.RedditModel):
         Parameters
         ----------
         filepath : str
-            Path to file where the model will be sabed.
+            Path to the file where the model will be sabed.
 
         """
         with open(filepath, 'wb') as f:

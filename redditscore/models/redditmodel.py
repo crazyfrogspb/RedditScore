@@ -234,7 +234,8 @@ class RedditModel(metaclass=ABCMeta):
             except KeyError:
                 raise KeyError('Step{} is not in the grid'.format(step))
 
-            current_grid = [current_grid]
+            if isinstance(current_grid, list) is False:
+                current_grid = [current_grid]
 
             for param_combination in current_grid:
                 items = sorted(param_combination.items())
@@ -300,7 +301,8 @@ class RedditModel(metaclass=ABCMeta):
         array, shape (n_samples, )
             Predicted class labels
         """
-
+        if not self.fitted:
+            raise NotFittedError('Model has to be fitted first')
         X = np.array(X)
         return self._model.predict(X)
 
@@ -320,6 +322,8 @@ class RedditModel(metaclass=ABCMeta):
         array, shape (n_samples, num_classes)
             Predicted class probabilities
         """
+        if not self.fitted:
+            raise NotFittedError('Model has to be fitted first')
         if not isinstance(X, np.ndarray):
             X = np.array(X)
         return self._model.predict_proba(X)
@@ -384,8 +388,8 @@ class RedditModel(metaclass=ABCMeta):
         label_font_size: int, optional
             Font size for the labels on T-SNE plot
         """
-        if self.fitted is False:
-            raise NotFittedError('Model is not fitted yet')
+        if not self.fitted:
+            raise NotFittedError('Model has to be fitted first')
         if self.class_embeddings is None:
             raise ValueError(
                 'Plotting dendrograms is not available for this class of model')

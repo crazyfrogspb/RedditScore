@@ -19,8 +19,20 @@ import fastText
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.exceptions import NotFittedError
+from sklearn.preprocessing import MinMaxScaler
 
 from . import redditmodel
+
+
+def chunking_dot(big_matrix, small_matrix, chunk_size=50000):
+    # dot product in chunks
+    small_matrix = np.ascontiguousarray(small_matrix)
+    R = np.empty((big_matrix.shape[0], small_matrix.shape[1]))
+    for i in range(0, R.shape[0], chunk_size):
+        end = i + chunk_size
+        R[i:end] = np.dot(big_matrix[i:end], small_matrix)
+    return R
 
 
 def load_model(filepath):
@@ -39,7 +51,7 @@ def load_model(filepath):
         Unpickled model object.
 
     """
-    with open(os.path.splitext(filepath)[0] + '.pkl', 'wb') as f:
+    with open(os.path.splitext(filepath)[0] + '.pkl', 'rb') as f:
         model = pickle.load(f)
     model._model._model = fastText.load_model(
         os.path.splitext(filepath)[0] + '.bin')
@@ -173,6 +185,7 @@ class FastTextModel(redditmodel.RedditModel):
     def __init__(self, random_state=24, **kwargs):
         super().__init__(random_state=random_state)
         self.model_type = 'fasttext'
+        self._score_scaler = None
         self._model = FastTextClassifier(**kwargs)
 
     def set_params(self, **params):
@@ -207,12 +220,31 @@ class FastTextModel(redditmodel.RedditModel):
         self._model._model.save_softmax(path)
         emb = pd.read_csv(
             path, skiprows=[0], delimiter=' ', header=None).dropna(axis=1)
-        emb.iloc[:, 0] = emb.iloc[:, 0].str[len(self._model.label):]
+        emb = emb.round(decimals=5)
+        emb[0] = emb[0].str[len(self._model.label):]
         emb.set_index(0, inplace=True)
         self.class_embeddings = emb
         os.remove(path)
         self.fitted = True
+        self.raw_scores(X)
         return self
+
+    def raw_scores(self, X):
+        if not self.fitted:
+            raise NotFittedError('Model has to be fitted first')
+        docs = [' '.join(doc) for doc in X]
+        doc_vectors = np.zeros((len(X), self._model.dim))
+        for i, doc in enumerate(docs):
+            doc_vectors[i] = self._model._model.get_sentence_vector(doc)
+        # scores = np.dot(doc_vectors, self.class_embeddings.values.transpose())
+        scores = chunking_dot(
+            doc_vectors, self.class_embeddings.values.transpose())
+        if self._score_scaler:
+            scaled_scores = self._score_scaler.transform(scores)
+        else:
+            self._score_scaler = MinMaxScaler(feature_range=(0, 100))
+            scaled_scores = self._score_scaler.fit_transform(scores)
+        return pd.DataFrame(scaled_scores, columns=self._classes)
 
     def save_model(self, filepath):
         """Save model to disk.
