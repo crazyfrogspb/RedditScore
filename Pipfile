@@ -27,6 +27,7 @@ tweepy = "*"
 selenium = "*"
 eventlet = "*"
 yapf = "*"
+seaborn = "*"
 
 [requires]
 python_version = "3.5"

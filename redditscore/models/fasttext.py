@@ -21,7 +21,6 @@ import pandas as pd
 from scipy.spatial.distance import cdist
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.exceptions import NotFittedError
-from sklearn.preprocessing import MinMaxScaler
 
 from . import redditmodel
 
@@ -188,6 +187,8 @@ class FastTextModel(redditmodel.RedditModel):
         self.model_type = 'fasttext'
         self._score_scaler = None
         self._model = FastTextClassifier(**kwargs)
+        self.average_vectors_ = None
+        self.max_vectors_ = None
 
     def set_params(self, **params):
         """Set parameters of the model
@@ -229,35 +230,27 @@ class FastTextModel(redditmodel.RedditModel):
         self.class_embeddings = emb.loc[self._classes]
         os.remove(path)
         self.fitted = True
-        self.raw_scores(X)
+        self._calc_inp_embeddings(X, y)
         return self
 
-    def raw_scores(self, X):
-        if not self.fitted:
-            raise NotFittedError('Model has to be fitted first')
-        docs = np.array([' '.join(doc) for doc in X])
-        doc_vectors = np.zeros((len(docs), self._model.dim))
-        for i, doc in enumerate(docs):
+    def _calc_inp_embeddings(self, X, y):
+        doc_vectors = np.zeros((len(X), 100))
+        for i, doc in enumerate(X):
+            doc = ' '.join(doc)
             doc_vectors[i, :] = self._model._model.get_sentence_vector(doc)
-        scores = chunking_dot(
-            doc_vectors, self.class_embeddings.values.transpose())
-        if self._score_scaler:
-            scaled_scores = self._score_scaler.transform(scores)
-        else:
-            self._score_scaler = MinMaxScaler(feature_range=(0, 100))
-            scaled_scores = self._score_scaler.fit_transform(scores)
-        return pd.DataFrame(scaled_scores, columns=self._classes)
+        self.average_vectors_ = pd.DataFrame(doc_vectors).groupby(y).mean()
+        self.max_vectors_ = pd.DataFrame(doc_vectors).groupby(y).max()
 
-    def cosine_sims(self, X):
-        if not self.fitted:
-            raise NotFittedError('Model has to be fitted first')
-        docs = np.array([' '.join(doc) for doc in X])
-        doc_vectors = np.zeros((len(docs), self._model.dim))
-        for i, doc in enumerate(docs):
+    def similarity_scores(self, X):
+        doc_vectors = np.zeros((len(X), 100))
+        for i, doc in enumerate(X):
+            doc = ' '.join(doc)
             doc_vectors[i, :] = self._model._model.get_sentence_vector(doc)
-        sims = 1 - cdist(doc_vectors, self.class_embeddings.values,
-                         metric='cosine')
-        return pd.DataFrame(sims, columns=self._classes)
+        av_scores = pd.DataFrame(
+            1 - cdist(doc_vectors, self.average_vectors_, metric='cosine'), columns=self._classes)
+        max_scores = pd.DataFrame(
+            1 - cdist(doc_vectors, self.max_vectors_, metric='cosine'), columns=self._classes)
+        return av_scores, max_scores
 
     def save_model(self, filepath):
         """Save model to disk.

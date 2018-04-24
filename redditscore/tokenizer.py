@@ -164,6 +164,7 @@ def get_url_title(url, verbose=False):
         with Timeout(TIMEOUT, False):
             response = urlopen(url)
             if 'text/html' not in response.getheader('Content-Type'):
+                warnings.warn("Couldn't extract title from url {}".format(url))
                 return ''
             soup = BeautifulSoup(response, "lxml")
     except Exception:
