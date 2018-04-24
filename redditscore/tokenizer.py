@@ -22,13 +22,13 @@ import warnings
 from collections import OrderedDict
 from http import client
 from math import log
-from socket import gaierror, timeout
+from socket import gaierror
 from urllib import parse
-from urllib.error import HTTPError, URLError
 
 import requests
-import tldextract
 from bs4 import BeautifulSoup
+
+import tldextract
 from eventlet.green.urllib.request import urlopen
 from eventlet.timeout import Timeout
 from spacy.lang.en import English
@@ -163,6 +163,8 @@ def get_url_title(url, verbose=False):
     try:
         with Timeout(TIMEOUT, False):
             response = urlopen(url)
+            if 'text/html' not in response.getheader('Content-Type'):
+                return ''
             soup = BeautifulSoup(response, "lxml")
     except Exception:
         if verbose:
