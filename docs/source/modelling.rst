@@ -40,6 +40,7 @@ To save the model:
 >>> multi_model.save_model('models/multi.pkl')
 
 Each module has its own ``load_model`` function:
+
 >>> fasttext_model = fasttext.load_model('models/fasttext')
 >>> multi_model.save_model('models/multi.pkl')
 

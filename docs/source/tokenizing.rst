@@ -307,13 +307,3 @@ or this: ``U+1F601``, try setting ``latin_chars_fix=True``.
 
 >>> tokenizer = CrazyTokenizer(latin_chars_fix=True)
 >>> s = "I\\xe2\\x80\\x99m so annoyed by these characters \\xF0\\x9F\\x98\\xA2"
-
-Tokenizing a bunch of documents
--------------------------------
-Tokenizing 10,000 Reddit comments takes about 10 seconds on my Gigabyte Aero 15.
-
->>> import pandas as pd
->>> import os
->>> df = pd.read_csv(os.path.join('redditscore', 'data', 'reddit_small_sample.csv'))
->>> tokenizer = CrazyTokenizer(urls='domain')
->>> df['tokens'] = df['body'].apply(tokenizer.tokenize)
