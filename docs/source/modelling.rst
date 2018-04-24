@@ -4,10 +4,10 @@ Modelling
 You collected your training data, coverted it to the lists of tokens, now you can start training models!
 
 RedditScore currently supports training the following types of models:
+
     - Multinomial Naive Bayes, Bernoulli Naive Bayes and SVM from `scikit-learn package <http://scikit-learn.org>`__
     - `fastText model <https://github.com/facebookresearch/fastText>`__
     - MLP, LSTM, CNN neural networks (Keras implementation) - TODO
-    - 
 
 Fitting models
 ---------------------
@@ -34,4 +34,13 @@ All model wrappers have very similar interface:
     
 Model persistence
 ---------------------
+To save the model:
 
+>>> fasttext_model.save_model('models/fasttext')
+>>> multi_model.save_model('models/multi.pkl')
+
+Each module has its own ``load_model`` function:
+>>> fasttext_model = fasttext.load_model('models/fasttext')
+>>> multi_model.save_model('models/multi.pkl')
+
+**Note**: fastText and Keras models are saved into two files with '.pkl' and '.bin' extensions.read
