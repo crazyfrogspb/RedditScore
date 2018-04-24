@@ -2,7 +2,7 @@ CrazyTokenizer
 =====================
 
 Tokenizer description
---------------------
+---------------------
 
 CrazyTokenizer is a part of `RedditScore project <https://github.com/crazyfrogspb/RedditScore>`__.
 It's a tokenizer - tool for splitting strings of text into tokens. Tokens can
@@ -15,7 +15,7 @@ CrazyTokenizer is based on the amazing `spaCY NLP framework <https://spacy.io/>`
 Make sure to check it out!
 
 Initializing
---------------------
+------------
 To import and to initialize an instance of CrazyTokenizer with the default
 preprocessing options, do the following:
 
@@ -31,10 +31,10 @@ Now you can start tokenizing!
 'https://github.com/crazyfrogspb/RedditScore', 'is', 'the', 'best', 'python', 'library']
 
 Features
---------------------
+--------
 
 Lowercasing and all caps
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 For many text classification problems, keeping capital letters only
 introduces unnecessary noise. Setting ``lowercase=True`` (True by default)
 will lowercase all words in your documents.
@@ -47,7 +47,7 @@ Setting ``keepcaps=True`` will do exactly that (default is False).
 ['moscow', 'is', 'the', 'capital', 'of', 'RUSSIA']
 
 Normalizing
-^^^^^^^^
+^^^^^^^^^^^
 Typing like thiiiis is amaaaaazing! However, in terms of text classification
 *amaaaaazing* is probably not too different from *amaaaazing*. CrazyTokenizer
 can normalize sequences of repeated characters for you. Just set ``normalize=n``,
@@ -58,7 +58,7 @@ where *n* is the number of characters you want to keep. Default value is 3.
 ['gooo', 'patriots']
 
 Ignoring quotes
-^^^^^^^^
+^^^^^^^^^^^^^^^
 People often quote other comments or tweets, but it doesn't mean that they
 endorse the original message. Removing the content of the quotes can help
 you to get rid of that. Just set ``ignorequotes=True`` (False by deafult).
@@ -68,7 +68,7 @@ you to get rid of that. Just set ``ignorequotes=True`` (False by deafult).
 ['and', 'then', 'she', 'said']
 
 Removing stop words
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 Removing stop words can sometimes significantly boost performance of your
 classifier. CrazyTokenizer gives you a few options to remove stop words:
 
@@ -93,7 +93,7 @@ classifier. CrazyTokenizer gives you a few options to remove stop words:
   ['the', 'best', 'leader', 'in', 'the', 'world', 'is']
 
 Word stemming and lemmatizing
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you have NLTK installed, CrazyTokenizer can use PorterStemmer or
 WordNetLemmatizer for you. Just pass ``stem`` or ``lemm`` options
 respectively to ``stem`` parameter.
@@ -103,7 +103,7 @@ respectively to ``stem`` parameter.
 ['i', 'am', 'an', 'unbeliev', 'fantast', 'human', 'be']
 
 Removing punctuation and linebreaks
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Punctuation and linebreak characters usually just introduce extra noise
 to your text classification problem,
 so you can easily remove it with ``removepunct`` and ``removebreaks`` options.
@@ -114,7 +114,7 @@ Both default to True.
 ['i', 'love', 'my', 'life', 'friends', 'and', 'oxford', 'commas', 'amen']
 
 Decontracting
-^^^^^^^^
+^^^^^^^^^^^^^
 CrazyTokenizer can attempt to expand some of those annoying contractions
 for you. **Note**: use at your own risk.
 
@@ -123,7 +123,7 @@ for you. **Note**: use at your own risk.
 ['i', 'will', 'have', 'two', 'number', 'nines', 'a', 'number', 'nine', 'large']
 
 Dealing with hashtags
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 Hashtags are super-popular on Twitter. CrazyTokenizer can do one of
 three things about them:
 
@@ -145,7 +145,7 @@ information when you calculate RedditScores for the Twitter data.
 ["let's", "make", "america", "great", "again", "america", "first"]
 
 Dealing with special tokens
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 CrazyTokenizer correctly handles Twitter handles, subreddits, Reddit usernames,
 emails, all sorts of numbers, and extracts them as separate tokens:
 
@@ -171,7 +171,7 @@ handle with the screen name of the user that is listed in their profile.
 ['donald', 'j.', 'trump', 'please', 'make', 'america', 'great', 'again']
 
 URLs
-^^^^^^^^
+^^^^
 NLP practicioners often simply remove all URL occurrences since they do not
 seem to contain any useful semantic information. Of course, CrazyTokenizer
 correctly recognizes URLs as separate tokens and can remove or replace them
@@ -232,18 +232,16 @@ to ``urls`` parameter.
 >>> import json
 >>> with open('domains.json', 'w') as f:
       json.dump(tokenizer._domains, f)
->>> with open('titles.json', 'w') as f:
-      json.dump(tokenizer._titles, f)
+>>> with open('realnames.json', 'w') as f:
+      json.dump(tokenizer._realnames, f)
 >>> with open('domains.json', 'r') as f:
       domains = json.load(f)
->>> tokenizer = CrazyTokenizer(urls='title')
->>> with open('titles.json', 'r') as f:
-      titles = json.load(f)
->>> tokenizer = CrazyTokenizer(urls=domains)
->>> >>> tokenizer = CrazyTokenizer(urls=titles)
+>>> with open('realnames.json', 'r') as f:
+      realnames = json.load(f)
+>>> tokenizer = CrazyTokenizer(urls=domains, twitter_handles=realnames)
 
 Extra patterns and keeping untokenized
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 You can also supply your own replacement rules to CrazyTokenizer. In particular,
 you need to provide a tuple that contains unique name for your rule, compiled
 re pattern and a replacement token.
@@ -263,7 +261,7 @@ supply a list of strings that should be kept as single tokens.
 ['Moscow', 'sucks', 'St.Petersburg', 'rules']
 
 Converting whitespaces to underscores
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Popular implementations of models (most notably, fastText) do not support
 custom token splitting rules and simply split on whitespaces. In order to deal
 with that, CrazyTokenizer can replace all whitespaces in the final tokens by
@@ -275,14 +273,14 @@ underscores (enabled by deafult).
 ['new_york', 'is', 'a', 'great', 'place', 'to', 'make', 'a', 'rat', 'friend']
 
 Removing non-unicode characters
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 >>> tokenizer = CrazyTokenizer(remove_nonunicode=True)
 >>> text = "Россия - священная наша держава, Россия - великая наша страна!"
 >>> tokenizer.tokenize(text)
 []
 
 Emojis
-^^^^^^^^
+^^^^^^
 Social media users are notoriously famous for their excessive use of emojis.
 CrazyTokenizer correctly separates consecutive emojis.
 
@@ -302,7 +300,7 @@ You can supply your own lists of emojis as well.
 ['POS_EMOJI', '+', 'POS_EMOJI', '=', 'NEUTRAL_EMOJI']
 
 Unicode and hex characters
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 Sometimes your data gets messed up as a result of repeated save/load operations.
 If your data contains a lot of substrings that look like this: ``\\xe2\\x80\\x99``
 or this: ``U+1F601``, try setting ``latin_chars_fix=True``.
@@ -311,7 +309,7 @@ or this: ``U+1F601``, try setting ``latin_chars_fix=True``.
 >>> s = "I\\xe2\\x80\\x99m so annoyed by these characters \\xF0\\x9F\\x98\\xA2"
 
 Tokenizing a bunch of documents
---------------------
+-------------------------------
 Tokenizing 10,000 Reddit comments takes about 10 seconds on my Gigabyte Aero 15.
 
 >>> import pandas as pd

@@ -10,8 +10,8 @@ Contents:
    :maxdepth: 6
 
    RedditScore Overview <overview>
-   Tokenizing <tokenizing>
    Data Collection <data_collection>
+   Tokenizing <tokenizing>
    API Documentation <apis/api_main>
 
 

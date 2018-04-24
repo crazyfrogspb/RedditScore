@@ -10,7 +10,7 @@ Reddit Data
 --------------------
 The easiest way to obtain Reddit data is to use Google BigQuery
 `public dataset of Reddit comments <https://bigquery.cloud.google.com/table/fh-bigquery:reddit_comments.2017_12>`__.
-Google BigQuery is not free, however, you can get 365 days trial and 300$ credit
+Google BigQuery is not free, but luckily you can get 365 days trial and 300$ credit
 when you register for the first time.
 
 After setting up your account, create a project and copy its Project ID. Next,
