@@ -194,7 +194,9 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
             warnings.warn("{} doesn't exist".format(screen_name))
             return pd.DataFrame()
         else:
-            raise Exception("tweepy error") from e
+            warnings.warn('Error encountered for user {}: '.format(
+                screen_name) + str(e))
+            return pd.DataFrame()
 
     alltweets.extend(new_tweets)
     oldest = alltweets[-1].id - 1
