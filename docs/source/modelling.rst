@@ -17,8 +17,8 @@ All model wrappers have very similar interface:
 .. code:: python
 
     from redditscore import tokenizer
-    from redditscore.models import fasttext, sklearn
-    
+    from redditscore.models import fasttext_mod, sklearn_mod
+
     # reading and tokenizing data
     df = pd.read_csv(os.path.join('redditscore', 'reddit_small_sample.csv'))
     df = df.sample(frac=1.0, random_state=24) # shuffling data
@@ -26,12 +26,12 @@ All model wrappers have very similar interface:
     X = df['body'].apply(tokenizer.tokenize) # tokenizing Reddit comments
     y = df['subreddit']
 
-    fasttext_model = fasttext.FastTextModel(epochs=5, minCount=5)
-    multi_model = sklearn.SklearnModel(model_type='multinomial', ngrams=2, tfidf=False)
-    
+    fasttext_model = fasttext_mod.FastTextModel(epochs=5, minCount=5)
+    multi_model = sklearn_mod.SklearnModel(model_type='multinomial', ngrams=2, tfidf=False)
+
     fasttext_model.fit(X, y)
     multi_model.fit(X, y)
-    
+
 Model persistence
 ---------------------
 To save the model:
@@ -41,7 +41,7 @@ To save the model:
 
 Each module has its own ``load_model`` function:
 
->>> fasttext_model = fasttext.load_model('models/fasttext')
->>> multi_model.save_model('models/multi.pkl')
+>>> fasttext_model = fasttext_mod.load_model('models/fasttext')
+>>> multi_model = sklearn_mod.load_model('models/multi.pkl')
 
 **Note**: fastText and Keras models are saved into two files with '.pkl' and '.bin' extensions.read

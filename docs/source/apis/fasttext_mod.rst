@@ -1,6 +1,6 @@
 FastTextModel
 -----------
 
-.. automodule:: models.fasttext
+.. automodule:: models.fasttext_mod
    :members:
    :inherited-members:

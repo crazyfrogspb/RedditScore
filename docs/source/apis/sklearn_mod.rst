@@ -1,6 +1,6 @@
 SklearnModel
 -----------
 
-.. automodule:: models.sklearn
+.. automodule:: models.sklearn_mod
    :members:
    :inherited-members:

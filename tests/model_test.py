@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from sklearn.model_selection import GridSearchCV
 
-from redditscore.models import fasttext, sklearn
+from redditscore.models import fasttext_mod, sklearn_mod
 from redditscore.tokenizer import CrazyTokenizer
 
 df = pd.read_csv(os.path.join(os.path.dirname(__file__), '..',
@@ -31,17 +31,17 @@ y = df['subreddit']
 
 
 def test_model_init():
-    multi_model = sklearn.SklearnModel(
+    multi_model = sklearn_mod.SklearnModel(
         model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngrams=1)
-    bernoulli_model = sklearn.SklearnModel(
+    bernoulli_model = sklearn_mod.SklearnModel(
         model_type='bernoulli', alpha=0.1, random_state=24, tfidf=False, ngrams=1)
-    svm_model = sklearn.SklearnModel(model_type='svm', C=0.1,
-                                     random_state=24, tfidf=False, ngrams=1)
-    fasttext_model = fasttext.FastTextModel(minCount=5)
+    svm_model = sklearn_mod.SklearnModel(model_type='svm', C=0.1,
+                                         random_state=24, tfidf=False, ngrams=1)
+    fasttext_model = fasttext_mod.FastTextModel(minCount=5)
 
 
 def test_multimodel():
-    multi_model = sklearn.SklearnModel(model_type='multinomial')
+    multi_model = sklearn_mod.SklearnModel(model_type='multinomial')
     multi_model.tune_params(X, y, cv=0.2, scoring='neg_log_loss',
                             param_grid={'tfidf': [False, True]})
     multi_model.tune_params(X, y, cv=5, scoring='accuracy',
@@ -52,7 +52,7 @@ def test_multimodel():
 
 
 def test_bernoulli():
-    bernoulli_model = sklearn.SklearnModel(model_type='bernoulli')
+    bernoulli_model = sklearn_mod.SklearnModel(model_type='bernoulli')
     bernoulli_model.tune_params(X, y, cv=0.2, scoring='neg_log_loss',
                                 param_grid={'tfidf': [False, True]})
     bernoulli_model.tune_params(X[0:10], y[0:10], cv=0.2)
@@ -64,7 +64,7 @@ def test_bernoulli():
 
 
 def test_fasttext_train():
-    fasttext_model = fasttext.FastTextModel(minCount=5)
+    fasttext_model = fasttext_mod.FastTextModel(minCount=5)
     fasttext_model.fit(X, y)
     fasttext_model.predict(X)
     fasttext_model.predict_proba(X)
@@ -74,7 +74,7 @@ def test_fasttext_train():
 
 
 def test_step_exception():
-    fasttext_model = fasttext.FastTextModel(minCount=5)
+    fasttext_model = fasttext_mod.FastTextModel(minCount=5)
     with pytest.raises(KeyError) as e_info:
         fasttext_model.tune_params(X, y, cv=0.2, param_grid={
                                    'step0': {'epoch': [1, 2]},

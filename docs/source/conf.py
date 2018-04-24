@@ -26,17 +26,14 @@ sys.path.insert(0, os.path.abspath(
     os.path.join('..', '..', 'redditscore', 'models')))
 sys.path.insert(0, os.path.abspath("."))
 
-# class Mock(MagicMock):
-#    @classmethod
-#    def __getattr__(cls, name):
-#        return MagicMock()
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
 
 
-# MOCK_MODULES = ["requests", "tldextract", "spacy.lang.en", "spacy.matcher",
-#                "spacy.tokenizer", "spacy.tokens", "numpy", "sklearn.metrics", "sklearn.model_selection",
-#                "sklearn.feature_extraction.text", "sklearn.naive_bayes", "sklearn.pipeline",
-#                "sklearn.svm", "fastText", "sklearn.base", "keras", "requests.exceptions",
-#                "spacy.lang", "beautifulsoup4", "beautifulsoup4.BeautifulSoup", "selenium"]
+MOCK_MODULES = ["sklearn.feature_extraction.text", "sklearn"]
 #sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 

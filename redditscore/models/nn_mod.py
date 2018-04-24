@@ -10,7 +10,7 @@ from keras.utils import to_categorical
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import LabelEncoder
 
-from . import redditmodel, sklearn
+from . import redditmodel, sklearn_mod
 
 
 def reverse_dictionary(dict):
@@ -59,7 +59,7 @@ class MLPModel(redditmodel.RedditModel):
 
     def _build_vocab(self, X):
         vectorizer = CountVectorizer(
-            analyzer=sklearn._build_analyzer(self.ngrams),
+            analyzer=sklearn_mod._build_analyzer(self.ngrams),
             min_df=self.min_count)
         self._analyzer = vectorizer.build_analyzer()
         vectorizer.fit(X)

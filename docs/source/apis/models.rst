@@ -6,6 +6,6 @@ Popular models for text classification
 .. toctree::
    :maxdepth: 3
 
-   sklearn
-   fasttext
-   neuralnet
+   sklearn_mod
+   fasttext_mod
+   nn_mod

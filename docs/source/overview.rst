@@ -23,7 +23,7 @@ Usage example:
     import pandas as pd
 
     from redditscore import tokenizer
-    from redditscore.models import fasttext
+    from redditscore.models import fasttext_mod
 
     df = pd.read_csv(os.path.join('redditscore', 'reddit_small_sample.csv'))
     df = df.sample(frac=1.0, random_state=24) # shuffling data
@@ -31,22 +31,22 @@ Usage example:
     X = df['body'].apply(tokenizer.tokenize) # tokenizing Reddit comments
     y = df['subreddit']
 
-    fasttext_model = fasttext.FastTextModel() # initializing fastText model
+    fasttext_model = fasttext_mod.FastTextModel() # initializing fastText model
 
     fasttext_model.tune_params(X, y, cv=5, scoring='accuracy') # tune hyperparameters of the model using default grid
     fasttext_model.fit(X, y) # fit model
     fasttext_model.save_model('models/fasttext_model') # save model
     fasttext_model = fasttext.load_model('models/fasttext_model') # load model
-    
+
     dendrogram_pars = {'leaf_font_size': 14}
     tsne_pars = {'perplexity': 30.0}
     fasttext_model.plot_analytics(dendrogram_pars=dendrogram_pars, # plot dendrogram and T-SNE plot
                              tsne_pars=tsne_pars,
                              fig_sizes=((25, 20), (22, 22)))
-                             
+
     probs = fasttext_model.predict_proba(X)
     av_scores, max_scores = fasttext_model.similarity_scores(X)
-    
+
 
 
 References:

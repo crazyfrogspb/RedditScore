@@ -26,9 +26,8 @@ from socket import gaierror
 from urllib import parse
 
 import requests
-from bs4 import BeautifulSoup
-
 import tldextract
+from bs4 import BeautifulSoup
 from eventlet.green.urllib.request import urlopen
 from eventlet.timeout import Timeout
 from spacy.lang.en import English
@@ -164,7 +163,7 @@ def get_url_title(url, verbose=False):
         with Timeout(TIMEOUT, False):
             response = urlopen(url)
             if 'text/html' not in response.getheader('Content-Type'):
-                warnings.warn("Couldn't extract title from url {}".format(url))
+                warnings.warn("Url {} is not a text/html page".format(url))
                 return ''
             soup = BeautifulSoup(response, "lxml")
     except Exception:
