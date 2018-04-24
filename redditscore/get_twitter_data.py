@@ -14,6 +14,7 @@ This work is licensed under the terms of the MIT license.
 
 import datetime
 import math
+import warnings
 from time import sleep
 
 import pandas as pd
@@ -185,8 +186,16 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
     alltweets = []
 
     print("Now grabbing tweets for {}".format(screen_name))
-    new_tweets = api.user_timeline(
-        screen_name=screen_name, count=200, tweet_mode='extended')
+    try:
+        new_tweets = api.user_timeline(
+            screen_name=screen_name, count=200, tweet_mode='extended')
+    except tweepy.TweepError as e:
+        if e.api_code == 34:
+            warnings.warn("{} doesn't exist".format(screen_name))
+            return pd.DataFrame()
+        else:
+            raise Exception("tweepy error") from e
+
     alltweets.extend(new_tweets)
     oldest = alltweets[-1].id - 1
 
