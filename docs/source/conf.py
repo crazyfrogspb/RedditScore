@@ -33,8 +33,8 @@ class Mock(MagicMock):
         return MagicMock()
 
 
-MOCK_MODULES = ["sklearn.feature_extraction.text", "sklearn"]
-#sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+MOCK_MODULES = ["nltk", "scipy", "keras", 'tensorflow', "tensorflow-gpu"]
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
 # -- General configuration ------------------------------------------------

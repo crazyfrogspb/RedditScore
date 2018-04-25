@@ -20,7 +20,10 @@ if not on_rtd:
                         "matplotlib>=2.2.0", "beautifulsoup4>=4.6.0", "adjustText>=0.6.3",
                         "eventlet>=0.22.1"]
 else:
-    INSTALL_REQUIRES = ["setuptools", "requests>=2.18.0"]
+    INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.11", "tldextract>=2.1.0", "requests>=2.18.0",
+                        "scikit-learn>=0.19.0", "pandas>=0.22.0",
+                        "matplotlib>=2.2.0", "beautifulsoup4>=4.6.0", "adjustText>=0.6.3",
+                        "eventlet>=0.22.1", 'Cython']
 
 EXTRAS = {
     "nltk": ["nltk>=3.2.5"],
