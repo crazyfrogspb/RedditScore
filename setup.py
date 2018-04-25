@@ -21,7 +21,7 @@ if not on_rtd:
                         "matplotlib>=2.2.0", "beautifulsoup4>=4.6.0",
                         "adjustText>=0.6.3", "eventlet>=0.22.1"]
 else:
-    INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.11", "scikit-learn>=0.19.0",
+    INSTALL_REQUIRES = ["setuptools", "scikit-learn>=0.19.0",
                         "pandas>=0.22.0", "eventlet>=0.22.1"]
 
 EXTRAS = {
@@ -36,7 +36,7 @@ with open('LICENSE') as f:
 
 setup(
     name='redditscore',
-    version='0.6.0',
+    version='0.7.0',
     description='Package for performing Reddit-based text analysis',
     long_description=readme,
     author='Evgenii Nikitin',
