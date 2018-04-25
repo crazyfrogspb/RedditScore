@@ -14,7 +14,10 @@
 # serve to show the default.
 
 import os
+import pickle
 import sys
+import tempfile
+import warnings
 from unittest.mock import MagicMock
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -33,8 +36,9 @@ class Mock(MagicMock):
         return MagicMock()
 
 
-MOCK_MODULES = ["nltk", "scipy", "keras", 'tensorflow', "tensorflow-gpu"]
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+MOCK_MODULES = ["fastText", "scipy.spatial.distance",
+                "matplotlib.cm", "matplotlib.pyplot", "scipy.cluster.hierarchy",
+                "adjustText", "requests", "tldextract", "bs4", "tweepy"]
 
 
 # -- General configuration ------------------------------------------------
@@ -45,8 +49,7 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.napoleon', 'sphinx.ext.viewcode']
+extensions = ['sphinx.ext.napoleon', 'sphinx.ext.viewcode']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
