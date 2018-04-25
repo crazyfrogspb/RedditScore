@@ -1,0 +1,466 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>redditscore.get_reddit_data &mdash; RedditScore 0.4.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> RedditScore
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">RedditScore Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../data_collection.html">Data Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tokenizing.html">Tokenizing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modelling.html">Modelling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../apis/api_main.html">API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">RedditScore</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>redditscore.get_reddit_data</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for redditscore.get_reddit_data</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">calendar</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pandas.io</span> <span class="k">import</span> <span class="n">gbq</span>
+
+
+<div class="viewcode-block" id="diff_month"><a class="viewcode-back" href="../../redditscore.html#redditscore.get_reddit_data.diff_month">[docs]</a><span class="k">def</span> <span class="nf">diff_month</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">):</span>
+    <span class="c1"># Get difference between dates in months</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">d1</span><span class="o">.</span><span class="n">year</span> <span class="o">-</span> <span class="n">d2</span><span class="o">.</span><span class="n">year</span><span class="p">)</span> <span class="o">*</span> <span class="mi">12</span> <span class="o">+</span> <span class="n">d1</span><span class="o">.</span><span class="n">month</span> <span class="o">-</span> <span class="n">d2</span><span class="o">.</span><span class="n">month</span></div>
+
+
+<div class="viewcode-block" id="add_months"><a class="viewcode-back" href="../../redditscore.html#redditscore.get_reddit_data.add_months">[docs]</a><span class="k">def</span> <span class="nf">add_months</span><span class="p">(</span><span class="n">sourcedate</span><span class="p">,</span> <span class="n">months</span><span class="p">):</span>
+    <span class="c1"># Add months to the date</span>
+    <span class="n">month</span> <span class="o">=</span> <span class="n">sourcedate</span><span class="o">.</span><span class="n">month</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">months</span>
+    <span class="n">year</span> <span class="o">=</span> <span class="n">sourcedate</span><span class="o">.</span><span class="n">year</span> <span class="o">+</span> <span class="n">month</span> <span class="o">//</span> <span class="mi">12</span>
+    <span class="n">month</span> <span class="o">=</span> <span class="n">month</span> <span class="o">%</span> <span class="mi">12</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">day</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">sourcedate</span><span class="o">.</span><span class="n">day</span><span class="p">,</span> <span class="n">calendar</span><span class="o">.</span><span class="n">monthrange</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">month</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">day</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="construct_query"><a class="viewcode-back" href="../../redditscore.html#redditscore.get_reddit_data.construct_query">[docs]</a><span class="k">def</span> <span class="nf">construct_query</span><span class="p">(</span><span class="n">subreddits</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">score_limit</span><span class="p">):</span>
+    <span class="c1"># Construct a query string</span>
+    <span class="n">subreddits</span> <span class="o">=</span> <span class="s1">&#39;&quot;, &quot;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subreddits</span><span class="p">)</span>
+    <span class="n">subreddits</span> <span class="o">=</span> <span class="s1">&#39;&quot;&#39;</span> <span class="o">+</span> <span class="n">subreddits</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span>
+    <span class="k">if</span> <span class="n">score_limit</span><span class="p">:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="s2">&quot; AND score &gt;= </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">score_limit</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        id,</span>
+<span class="s2">        body,</span>
+<span class="s2">        subreddit,</span>
+<span class="s2">        author,</span>
+<span class="s2">        created_utc,</span>
+<span class="s2">        link_id,</span>
+<span class="s2">        parent_id,</span>
+<span class="s2">        score</span>
+<span class="s2">    FROM [fh-bigquery:reddit_comments.&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">month</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;]</span>
+<span class="s2">    WHERE</span>
+<span class="s2">        subreddit in (&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">subreddits</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;)</span>
+<span class="s2">        AND body != &#39;[deleted]&#39;</span>
+<span class="s2">        AND body != &#39;[removed]&#39;</span>
+<span class="s2">        AND body NOT LIKE &#39;%has been removed%&#39;</span>
+<span class="s2">        AND body NOT LIKE &#39;%has been overwritten%&#39;</span>
+<span class="s2">        AND body NOT LIKE &#39;%performed automatically%&#39;</span>
+<span class="s2">        AND body NOT LIKE &#39;%bot action performed%&#39;</span>
+<span class="s2">        AND body NOT LIKE &#39;%autowikibot%&#39;</span>
+<span class="s2">        AND body NOT LIKE &#39;%I am a bot%&#39;</span>
+<span class="s2">        AND LENGTH(body) &gt; 0&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">score</span>
+    <span class="k">return</span> <span class="n">query</span></div>
+
+
+<div class="viewcode-block" id="construct_sample_score_query"><a class="viewcode-back" href="../../redditscore.html#redditscore.get_reddit_data.construct_sample_score_query">[docs]</a><span class="k">def</span> <span class="nf">construct_sample_score_query</span><span class="p">(</span><span class="n">subreddits</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">sample_size</span><span class="p">,</span> <span class="n">score_limit</span><span class="p">):</span>
+    <span class="c1"># Construct a query with sampling top-scoring comments</span>
+    <span class="n">subreddits</span> <span class="o">=</span> <span class="s1">&#39;&quot;, &quot;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subreddits</span><span class="p">)</span>
+    <span class="n">subreddits</span> <span class="o">=</span> <span class="s1">&#39;&quot;&#39;</span> <span class="o">+</span> <span class="n">subreddits</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span>
+    <span class="k">if</span> <span class="n">score_limit</span><span class="p">:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="s2">&quot; AND score &gt;= </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">score_limit</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        id,</span>
+<span class="s2">        body,</span>
+<span class="s2">        subreddit,</span>
+<span class="s2">        author,</span>
+<span class="s2">        created_utc,</span>
+<span class="s2">        link_id,</span>
+<span class="s2">        parent_id,</span>
+<span class="s2">        score</span>
+<span class="s2">    FROM (</span>
+<span class="s2">        SELECT</span>
+<span class="s2">            id,</span>
+<span class="s2">            body,</span>
+<span class="s2">            subreddit,</span>
+<span class="s2">            author,</span>
+<span class="s2">            created_utc,</span>
+<span class="s2">            link_id,</span>
+<span class="s2">            parent_id,</span>
+<span class="s2">            score,</span>
+<span class="s2">            ROW_NUMBER() OVER(PARTITION BY subreddit ORDER BY score DESC) as pos</span>
+<span class="s2">        FROM [fh-bigquery:reddit_comments.&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">month</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;]</span>
+<span class="s2">        WHERE</span>
+<span class="s2">            subreddit in (&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">subreddits</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;)</span>
+<span class="s2">            AND body != &#39;[deleted]&#39;</span>
+<span class="s2">            AND body != &#39;[removed]&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%has been removed%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%has been overwritten%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%performed automatically%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%bot action performed%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%autowikibot%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%I am a bot%&#39;</span>
+<span class="s2">            AND LENGTH(body) &gt; 0&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">score</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    )</span>
+<span class="s2">    WHERE pos &lt;= &quot;&quot;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">sample_size</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">query</span></div>
+
+
+<div class="viewcode-block" id="construct_sample_query"><a class="viewcode-back" href="../../redditscore.html#redditscore.get_reddit_data.construct_sample_query">[docs]</a><span class="k">def</span> <span class="nf">construct_sample_query</span><span class="p">(</span><span class="n">subreddits</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">sample_size</span><span class="p">,</span> <span class="n">score_limit</span><span class="p">):</span>
+    <span class="c1"># Constuct a query string with random sampling</span>
+    <span class="n">subreddits</span> <span class="o">=</span> <span class="s1">&#39;&quot;, &quot;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subreddits</span><span class="p">)</span>
+    <span class="n">subreddits</span> <span class="o">=</span> <span class="s1">&#39;&quot;&#39;</span> <span class="o">+</span> <span class="n">subreddits</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span>
+    <span class="k">if</span> <span class="n">score_limit</span><span class="p">:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="s2">&quot; AND score &gt;= </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">score_limit</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        id,</span>
+<span class="s2">        body,</span>
+<span class="s2">        subreddit,</span>
+<span class="s2">        author,</span>
+<span class="s2">        created_utc,</span>
+<span class="s2">        link_id,</span>
+<span class="s2">        parent_id,</span>
+<span class="s2">        score</span>
+<span class="s2">    FROM (</span>
+<span class="s2">        SELECT</span>
+<span class="s2">            id,</span>
+<span class="s2">            body,</span>
+<span class="s2">            subreddit,</span>
+<span class="s2">            author,</span>
+<span class="s2">            created_utc,</span>
+<span class="s2">            link_id,</span>
+<span class="s2">            parent_id,</span>
+<span class="s2">            score,</span>
+<span class="s2">            RAND() as rnd,</span>
+<span class="s2">            ROW_NUMBER() OVER(PARTITION BY subreddit ORDER BY rnd) as pos</span>
+<span class="s2">        FROM [fh-bigquery:reddit_comments.&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">month</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;]</span>
+<span class="s2">        WHERE</span>
+<span class="s2">            subreddit in (&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">subreddits</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;)</span>
+<span class="s2">            AND body != &#39;[deleted]&#39;</span>
+<span class="s2">            AND body != &#39;[removed]&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%has been removed%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%has been overwritten%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%performed automatically%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%bot action performed%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%autowikibot%&#39;</span>
+<span class="s2">            AND body NOT LIKE &#39;%I am a bot%&#39;</span>
+<span class="s2">            AND LENGTH(body) &gt; 0&quot;&quot;&quot;</span> <span class="o">+</span> <span class="n">score</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    )</span>
+<span class="s2">    WHERE pos &lt;= &quot;&quot;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">sample_size</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">query</span></div>
+
+
+<div class="viewcode-block" id="get_comments"><a class="viewcode-back" href="../../redditscore.html#redditscore.get_reddit_data.get_comments">[docs]</a><span class="k">def</span> <span class="nf">get_comments</span><span class="p">(</span><span class="n">subreddits</span><span class="p">,</span> <span class="n">timerange</span><span class="p">,</span> <span class="n">project_id</span><span class="p">,</span> <span class="n">private_key</span><span class="p">,</span> <span class="n">score_limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">comments_per_month</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">top_scores</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">csv_directory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">configuration</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Obtain Reddit comments using Google BigQuery</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    subreddits: list</span>
+<span class="sd">        List of subreddit names</span>
+
+<span class="sd">    timerange: iterable, shape (2,)</span>
+<span class="sd">        Start and end dates in the &#39;%Y_%m&#39; format.</span>
+<span class="sd">        Example: (&#39;2016_08&#39;, &#39;2017_02&#39;)</span>
+
+<span class="sd">    project_id: str</span>
+<span class="sd">        Google BigQuery Account project ID</span>
+
+<span class="sd">    private_key: str</span>
+<span class="sd">        File path to JSON file with service account private key</span>
+<span class="sd">        https://cloud.google.com/bigquery/docs/reference/libraries</span>
+
+<span class="sd">    score_limit: int, optional</span>
+<span class="sd">        Score limit for comment retrieving. If None, retrieve all comments.</span>
+
+<span class="sd">    comments_per_month: int, optional</span>
+<span class="sd">        Number of comments to sample from each subbredit per month. If None,</span>
+<span class="sd">        retrieve all comments.</span>
+
+<span class="sd">    top_scores: bool, optional</span>
+<span class="sd">        If True, sample top-scoring comments in each subreddit</span>
+<span class="sd">        instead of random sampling.</span>
+
+<span class="sd">    csv_directory: str, optional</span>
+<span class="sd">        CSV directory to save retrieved data. If None, return a DataFrame with</span>
+<span class="sd">        all comments.</span>
+
+<span class="sd">    verobse: bool, optional</span>
+<span class="sd">        If True, print the name of the table, which is being queried.</span>
+
+<span class="sd">    configuration: dict,  optional</span>
+<span class="sd">        Query config parameters for job processing.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df: pandas DataFrame</span>
+<span class="sd">        DataFrame with comments.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">subreddits</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;subreddits argument must be a list, not </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">subreddits</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">comments_per_month</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> \
+            <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">comments_per_month</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;comments_per_month must be an integer, not </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="nb">type</span><span class="p">(</span><span class="n">comments_per_month</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">csv_directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> \
+            <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">csv_directory</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> does not exist&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">csv_directory</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">iter</span><span class="p">(</span><span class="n">timerange</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;timerange argument must be an iterable&#39;</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">timerange</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="k">except</span> <span class="ne">AssertionError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;timerange argument has to contain only two elements&#39;</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">timerange</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;%Y_%m&#39;</span><span class="p">)</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">timerange</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;%Y_%m&#39;</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">diff_month</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">start</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">csv_directory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dfs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dfs</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">delta</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">date</span> <span class="o">=</span> <span class="n">add_months</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">table_name</span> <span class="o">=</span> <span class="n">date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y_%m&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s1">&#39;Querying from [fh-bigquery:reddit_comments.</span><span class="si">{}</span><span class="s1">]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">table_name</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">comments_per_month</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">construct_query</span><span class="p">(</span><span class="n">subreddits</span><span class="p">,</span> <span class="n">table_name</span><span class="p">,</span> <span class="n">score_limit</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">top_scores</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">construct_sample_score_query</span><span class="p">(</span>
+                <span class="n">subreddits</span><span class="p">,</span> <span class="n">table_name</span><span class="p">,</span> <span class="n">comments_per_month</span><span class="p">,</span> <span class="n">score_limit</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">construct_sample_query</span><span class="p">(</span>
+                <span class="n">subreddits</span><span class="p">,</span> <span class="n">table_name</span><span class="p">,</span> <span class="n">comments_per_month</span><span class="p">,</span> <span class="n">score_limit</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">gbq</span><span class="o">.</span><span class="n">read_gbq</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">project_id</span><span class="o">=</span><span class="n">project_id</span><span class="p">,</span>
+                          <span class="n">private_key</span><span class="o">=</span><span class="n">private_key</span><span class="p">,</span> <span class="n">configuration</span><span class="o">=</span><span class="n">configuration</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">csv_directory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dfs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">csv_directory</span><span class="p">,</span> <span class="n">table_name</span> <span class="o">+</span> <span class="s1">&#39;.csv&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">csv_directory</span><span class="p">,</span> <span class="n">table_name</span> <span class="o">+</span> <span class="s1">&#39;.csv&#39;</span><span class="p">),</span>
+                          <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dfs</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Evgenii Nikitin.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,527 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>redditscore package &mdash; RedditScore 0.4.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> RedditScore
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">RedditScore Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_collection.html">Data Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tokenizing.html">Tokenizing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modelling.html">Modelling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="apis/api_main.html">API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">RedditScore</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>redditscore package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/redditscore.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="redditscore-package">
+<h1>redditscore package<a class="headerlink" href="#redditscore-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="redditscore.models.html">redditscore.models package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="redditscore.models.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="redditscore.models.html#module-redditscore.models.doc2vec">redditscore.models.doc2vec module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="redditscore.models.html#redditscore-models-fasttext-module">redditscore.models.fasttext module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="redditscore.models.html#redditscore-models-neuralnet-module">redditscore.models.neuralnet module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="redditscore.models.html#module-redditscore.models.redditmodel">redditscore.models.redditmodel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="redditscore.models.html#redditscore-models-sklearn-module">redditscore.models.sklearn module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="redditscore.models.html#module-redditscore.models">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-redditscore.get_reddit_data">
+<span id="redditscore-get-reddit-data-module"></span><h2>redditscore.get_reddit_data module<a class="headerlink" href="#module-redditscore.get_reddit_data" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="redditscore.get_reddit_data.add_months">
+<code class="descclassname">redditscore.get_reddit_data.</code><code class="descname">add_months</code><span class="sig-paren">(</span><em>sourcedate</em>, <em>months</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/get_reddit_data.html#add_months"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.get_reddit_data.add_months" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.get_reddit_data.construct_query">
+<code class="descclassname">redditscore.get_reddit_data.</code><code class="descname">construct_query</code><span class="sig-paren">(</span><em>subreddits</em>, <em>month</em>, <em>score_limit</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/get_reddit_data.html#construct_query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.get_reddit_data.construct_query" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.get_reddit_data.construct_sample_query">
+<code class="descclassname">redditscore.get_reddit_data.</code><code class="descname">construct_sample_query</code><span class="sig-paren">(</span><em>subreddits</em>, <em>month</em>, <em>sample_size</em>, <em>score_limit</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/get_reddit_data.html#construct_sample_query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.get_reddit_data.construct_sample_query" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.get_reddit_data.construct_sample_score_query">
+<code class="descclassname">redditscore.get_reddit_data.</code><code class="descname">construct_sample_score_query</code><span class="sig-paren">(</span><em>subreddits</em>, <em>month</em>, <em>sample_size</em>, <em>score_limit</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/get_reddit_data.html#construct_sample_score_query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.get_reddit_data.construct_sample_score_query" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.get_reddit_data.diff_month">
+<code class="descclassname">redditscore.get_reddit_data.</code><code class="descname">diff_month</code><span class="sig-paren">(</span><em>d1</em>, <em>d2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/get_reddit_data.html#diff_month"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.get_reddit_data.diff_month" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.get_reddit_data.get_comments">
+<code class="descclassname">redditscore.get_reddit_data.</code><code class="descname">get_comments</code><span class="sig-paren">(</span><em>subreddits</em>, <em>timerange</em>, <em>project_id</em>, <em>private_key</em>, <em>score_limit=0</em>, <em>comments_per_month=None</em>, <em>top_scores=False</em>, <em>csv_directory=None</em>, <em>verbose=False</em>, <em>configuration=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/get_reddit_data.html#get_comments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.get_reddit_data.get_comments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Obtain Reddit comments using Google BigQuery</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>subreddits</strong> (<em>list</em>) – List of subreddit names</li>
+<li><strong>timerange</strong> (<em>iterable</em><em>, </em><em>shape</em><em> (</em><em>2</em><em>,</em><em>)</em>) – Start and end dates in the ‘%Y_%m’ format.
+Example: (‘2016_08’, ‘2017_02’)</li>
+<li><strong>project_id</strong> (<em>str</em>) – Google BigQuery Account project ID</li>
+<li><strong>private_key</strong> (<em>str</em>) – File path to JSON file with service account private key
+<a class="reference external" href="https://cloud.google.com/bigquery/docs/reference/libraries">https://cloud.google.com/bigquery/docs/reference/libraries</a></li>
+<li><strong>score_limit</strong> (<em>int</em><em>, </em><em>optional</em>) – Score limit for comment retrieving. If None, retrieve all comments.</li>
+<li><strong>comments_per_month</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of comments to sample from each subbredit per month. If None,
+retrieve all comments.</li>
+<li><strong>top_scores</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, sample top-scoring comments in each subreddit
+instead of random sampling.</li>
+<li><strong>csv_directory</strong> (<em>str</em><em>, </em><em>optional</em>) – CSV directory to save retrieved data. If None, return a DataFrame with
+all comments.</li>
+<li><strong>verobse</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, print the name of the table, which is being queried.</li>
+<li><strong>configuration</strong> (<em>dict</em><em>,  </em><em>optional</em>) – Query config parameters for job processing.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>df</strong> – DataFrame with comments.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-redditscore.get_twitter_data">
+<span id="redditscore-get-twitter-data-module"></span><h2>redditscore.get_twitter_data module<a class="headerlink" href="#module-redditscore.get_twitter_data" title="Permalink to this headline">¶</a></h2>
+<p>Tools to collect Twitter data from specific accounts.
+Part of the module is based on Twitter Scraper library:
+<a class="reference external" href="https://github.com/bpb27/twitter_scraping">https://github.com/bpb27/twitter_scraping</a></p>
+<p>Author: Evgenii Nikitin &lt;<a class="reference external" href="mailto:e&#46;nikitin&#37;&#52;&#48;nyu&#46;edu">e<span>&#46;</span>nikitin<span>&#64;</span>nyu<span>&#46;</span>edu</a>&gt;</p>
+<p>Part of <a class="reference external" href="https://github.com/crazyfrogspb/RedditScore">https://github.com/crazyfrogspb/RedditScore</a> project</p>
+<p>Copyright (c) 2018 Evgenii Nikitin. All rights reserved.
+This work is licensed under the terms of the MIT license.</p>
+<dl class="function">
+<dt id="redditscore.get_twitter_data.grab_tweets">
+<code class="descclassname">redditscore.get_twitter_data.</code><code class="descname">grab_tweets</code><span class="sig-paren">(</span><em>screen_name</em>, <em>twitter_creds</em>, <em>timeout=0.1</em>, <em>fields=None</em>, <em>get_more=False</em>, <em>browser='Firefox'</em>, <em>start_date=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/get_twitter_data.html#grab_tweets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.get_twitter_data.grab_tweets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all tweets from the account</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>screen_name</strong> (<em>str</em>) – Twitter handle to grab tweets for</li>
+<li><strong>twitter_creds</strong> (<em>dict</em>) – Dictionary with Twitter authentication credentials.
+Has to contain consumer_key, consumer_secret, access_key, access_secret</li>
+<li><strong>timeout</strong> (<em>float</em><em>, </em><em>optional</em>) – Sleeping time between requests</li>
+<li><strong>fields</strong> (<em>iter</em><em>, </em><em>optional</em>) – Extra fields to pull from the tweets</li>
+<li><strong>get_more</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, attempt to use Selenium to get more tweets after reaching
+3200 tweets limit</li>
+<li><strong>browser</strong> (<em>{'Firefox'</em><em>, </em><em>'Chrome'</em><em>, </em><em>'Safari'}</em><em>, </em><em>optional</em>) – Browser for Selenium to use. Corresponding browser and its webdriver
+have to be installed</li>
+<li><strong>start_date</strong> (<em>datetime.date</em><em>, </em><em>optional</em>) – The first date to start pulling extra tweets. If None, use 2016/01/01</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>alltweets</strong> – Pandas Dataframe with all collected tweets</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-redditscore.tokenizer">
+<span id="redditscore-tokenizer-module"></span><h2>redditscore.tokenizer module<a class="headerlink" href="#module-redditscore.tokenizer" title="Permalink to this headline">¶</a></h2>
+<p>CrazyTokenizer: spaCy-based tokenizer with Twitter- and Reddit-specific features</p>
+<p>Splitting hashtags is based on the idea from
+<a class="reference external" href="https://stackoverflow.com/questions/11576779/how-to-extract-literal-words-from-a-consecutive-string-efficiently">https://stackoverflow.com/questions/11576779/how-to-extract-literal-words-from-a-consecutive-string-efficiently</a></p>
+<p>Author: Evgenii Nikitin &lt;<a class="reference external" href="mailto:e&#46;nikitin&#37;&#52;&#48;nyu&#46;edu">e<span>&#46;</span>nikitin<span>&#64;</span>nyu<span>&#46;</span>edu</a>&gt;</p>
+<p>Part of <a class="reference external" href="https://github.com/crazyfrogspb/RedditScore">https://github.com/crazyfrogspb/RedditScore</a> project</p>
+<p>Copyright (c) 2018 Evgenii Nikitin. All rights reserved.
+This work is licensed under the terms of the MIT license.</p>
+<dl class="class">
+<dt id="redditscore.tokenizer.CrazyTokenizer">
+<em class="property">class </em><code class="descclassname">redditscore.tokenizer.</code><code class="descname">CrazyTokenizer</code><span class="sig-paren">(</span><em>lowercase=True</em>, <em>keepcaps=False</em>, <em>normalize=3</em>, <em>ignorequotes=False</em>, <em>ignorestopwords=False</em>, <em>stem=False</em>, <em>removepunct=True</em>, <em>removebreaks=True</em>, <em>decontract=False</em>, <em>splithashtags=False</em>, <em>twitter_handles=False</em>, <em>urls=False</em>, <em>hashtags=False</em>, <em>numbers=False</em>, <em>subreddits=False</em>, <em>reddit_usernames=False</em>, <em>emails=False</em>, <em>extra_patterns=None</em>, <em>keep_untokenized=None</em>, <em>whitespaces_to_underscores=True</em>, <em>remove_nonunicode=False</em>, <em>pos_emojis=None</em>, <em>neg_emojis=None</em>, <em>neutral_emojis=None</em>, <em>print_url_warnings=False</em>, <em>latin_chars_fix=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#CrazyTokenizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.CrazyTokenizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Tokenizer with Reddit- and Twitter-specific options</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lowercase</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, lowercase all tokens. Defaults to True.</li>
+<li><strong>keepcaps</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, keep ALL CAPS WORDS uppercased. Defaults to False.</li>
+<li><strong>normalize</strong> (<em>int</em><em> or </em><em>bool</em><em>, </em><em>optional</em>) – If not False, perform normalization of repeated charachers
+(“awesoooooome” -&gt; “awesooome”). The value of parameter
+determines the number of occurences to keep. Defaults to 3.</li>
+<li><strong>ignorequotes</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, ignore tokens contained within double quotes.
+Defaults to False.</li>
+<li><strong>ignorestopwords</strong> (<em>str</em><em>, </em><em>list</em><em>, or </em><em>boolean</em><em>, </em><em>optional</em>) – <p>Whether to ignore stopwords</p>
+<ul>
+<li>str: language to get a list of stopwords for from NLTK package</li>
+<li>list: list of stopwords to remove</li>
+<li>True: use built-in list of the english stop words</li>
+<li>False: keep all tokens</li>
+</ul>
+<p>Defaults to False</p>
+</li>
+<li><strong>stem</strong> (<em>{False</em><em>, </em><em>'stem'</em><em>, </em><em>'lemm'}</em><em>, </em><em>optional</em>) – <p>Whether to perform word stemming</p>
+<ul>
+<li>False: do not perform word stemming</li>
+<li>’stem’: use PorterStemmer from NLTK package</li>
+<li>’lemm’: use WordNetLemmatizer from NLTK package</li>
+</ul>
+</li>
+<li><strong>removepunct</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, remove punctuation tokens. Defaults to True.</li>
+<li><strong>removebreaks</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, remove linebreak tokens. Defaults to True.</li>
+<li><strong>decontract</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, attempt to expand certain contractions. Defaults to False.
+Example: “‘ll” -&gt; ” will”</li>
+<li><strong>splithashtags</strong> (<em>bool</em><em>, </em><em>optional</em>) – <p>If True, split hashtags according to word frequency.</p>
+<p>Example: “#vladimirputinisthebest” -&gt; “vladimir putin is the best”</p>
+<p>Defaults to False.</p>
+<p>Note: it will not do anything if “hashtags” argument is not False</p>
+</li>
+<li><strong>numbers</strong><strong>, </strong><strong>subreddits</strong><strong>, </strong><strong>reddit_usernames</strong><strong>, </strong><strong>emails</strong> (<em>hashtags</em><em>,</em>) – </li>
+<li><strong>or str</strong><strong>, </strong><strong>optional</strong> (<em>False</em>) – <p>Replacement of the different types of tokens</p>
+<ul>
+<li>False: leaves these tokens intact</li>
+<li>str: replacement token</li>
+<li>’‘: removes all occurrences of these tokens</li>
+</ul>
+</li>
+<li><strong>twitter_handles</strong> (<em>False</em><em>, </em><em>'realname'</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – <p>Replacement of twitter handles</p>
+<ul>
+<li>False: do nothing</li>
+<li>str: replacement token</li>
+<li>’realname’: replace with the real screen name of Twitter account</li>
+</ul>
+</li>
+<li><strong>urls</strong> (<em>False</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – <p>Replacement of parsed URLs</p>
+<ul>
+<li>False: leave URL intact</li>
+<li>str: replacement token</li>
+<li>dict: replace all URLs stored in keys with the corresponding values</li>
+<li>’‘: removes all occurrences of these tokens</li>
+<li>’domain’: extract domain (“<a class="reference external" href="http://cnn.com">http://cnn.com</a>” -&gt; “cnn”)</li>
+<li>’domain_unwrap_fast’: extract domain after unwraping links</li>
+</ul>
+<p>for a list of URL shorteners (goo.gl, t.co, bit.ly, tinyurl.com)
+- ‘domain_unwrap’: extract domain after unwraping all links
+- ‘title’: extract and tokenize title of each link after unwraping it</p>
+<p>Defaults to False.</p>
+</li>
+<li><strong>extra_patterns</strong> (<em>None</em><em> or </em><em>list of tuples</em><em>, </em><em>optional</em>) – <p>Replacement of any user-supplied extra patterns.
+Tuples must have the following form: (name, re_pattern, replacement_token):</p>
+<ul>
+<li>name (str): name of the pattern</li>
+<li>re_pattern (_sre.SRE_Pattern): compiled re pattern</li>
+<li>replacement_token (str): replacement token</li>
+</ul>
+<p>Defaults to None</p>
+</li>
+<li><strong>keep_untokenized</strong> (<em>None</em><em> or </em><em>list</em><em>, </em><em>optional</em>) – <p>List of expressions to keep untokenized</p>
+<p>Example: [“New York”, “Los Angeles”, “San Francisco”]</p>
+</li>
+<li><strong>whitespaces_to_underscores</strong> (<em>boolean</em><em>, </em><em>optional</em>) – If True, replace all whitespace characters with
+underscores in the final tokens. Defaults to True.</li>
+<li><strong>remove_nonunicode</strong> (<em>boolean</em><em>, </em><em>optional</em>) – If True, remove all non-unicode characters. Defaults to False.</li>
+<li><strong>neg_emojis</strong><strong>, </strong><strong>neutral_emojis</strong> (<em>pos_emojis</em><em>,</em>) – <p>Replace positive, negative, and neutral emojis with the special tokens</p>
+<ul>
+<li>None: do not perform replacement</li>
+<li>True: perform replacement of the default lists of emojis</li>
+<li>list: list of emojis to replace</li>
+</ul>
+</li>
+<li><strong>print_url_warnings</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, print URL-related warnings. Defaults to False.</li>
+<li><strong>latin_chars_fix</strong> (<em>bool</em><em>, </em><em>optional</em>) – Try applying this fix if you have a lot of xe2x80x99-like
+or U+1F601-like strings in your data. Defaults to False.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="redditscore.tokenizer.CrazyTokenizer.tokenize">
+<code class="descname">tokenize</code><span class="sig-paren">(</span><em>text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#CrazyTokenizer.tokenize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.CrazyTokenizer.tokenize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tokenize document</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>text</strong> (<em>str</em>) – Document to tokenize</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">List of tokens</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">redditscore.tokenizer</span> <span class="k">import</span> <span class="n">CrazyTokenizer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">CrazyTokenizer</span><span class="p">(</span><span class="n">splithashtags</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">hashtags</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="s2">&quot;#makeamericagreatagain&quot;</span><span class="p">)</span>
+<span class="go">[&quot;make&quot;, &quot;america&quot;, &quot;great&quot;, &quot;again&quot;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="redditscore.tokenizer.alpha_digits_check">
+<code class="descclassname">redditscore.tokenizer.</code><code class="descname">alpha_digits_check</code><span class="sig-paren">(</span><em>text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#alpha_digits_check"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.alpha_digits_check" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.tokenizer.batch">
+<code class="descclassname">redditscore.tokenizer.</code><code class="descname">batch</code><span class="sig-paren">(</span><em>iterable</em>, <em>n=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#batch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.batch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.tokenizer.get_twitter_realname">
+<code class="descclassname">redditscore.tokenizer.</code><code class="descname">get_twitter_realname</code><span class="sig-paren">(</span><em>twitter_handle</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#get_twitter_realname"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.get_twitter_realname" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.tokenizer.get_url_title">
+<code class="descclassname">redditscore.tokenizer.</code><code class="descname">get_url_title</code><span class="sig-paren">(</span><em>url</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#get_url_title"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.get_url_title" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.tokenizer.hashtag_check">
+<code class="descclassname">redditscore.tokenizer.</code><code class="descname">hashtag_check</code><span class="sig-paren">(</span><em>text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#hashtag_check"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.hashtag_check" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.tokenizer.retokenize_check">
+<code class="descclassname">redditscore.tokenizer.</code><code class="descname">retokenize_check</code><span class="sig-paren">(</span><em>text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#retokenize_check"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.retokenize_check" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.tokenizer.twitter_handle_check">
+<code class="descclassname">redditscore.tokenizer.</code><code class="descname">twitter_handle_check</code><span class="sig-paren">(</span><em>text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#twitter_handle_check"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.twitter_handle_check" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="redditscore.tokenizer.unshorten_url">
+<code class="descclassname">redditscore.tokenizer.</code><code class="descname">unshorten_url</code><span class="sig-paren">(</span><em>url</em>, <em>url_shorteners=None</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/redditscore/tokenizer.html#unshorten_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#redditscore.tokenizer.unshorten_url" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-redditscore">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-redditscore" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Evgenii Nikitin.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

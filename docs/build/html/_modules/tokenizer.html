@@ -1,0 +1,989 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>tokenizer &mdash; RedditScore 0.4.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> RedditScore
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">RedditScore Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_collection.html">Data Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tokenizing.html">Tokenizing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modelling.html">Modelling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apis/api_main.html">API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">RedditScore</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>tokenizer</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for tokenizer</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">CrazyTokenizer: spaCy-based tokenizer with Twitter- and Reddit-specific features</span>
+
+<span class="sd">Splitting hashtags is based on the idea from</span>
+<span class="sd">https://stackoverflow.com/questions/11576779/how-to-extract-literal-words-from-a-consecutive-string-efficiently</span>
+
+<span class="sd">Author: Evgenii Nikitin &lt;e.nikitin@nyu.edu&gt;</span>
+
+<span class="sd">Part of https://github.com/crazyfrogspb/RedditScore project</span>
+
+<span class="sd">Copyright (c) 2018 Evgenii Nikitin. All rights reserved.</span>
+<span class="sd">This work is licensed under the terms of the MIT license.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">http</span> <span class="k">import</span> <span class="n">client</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">log</span>
+<span class="kn">from</span> <span class="nn">socket</span> <span class="k">import</span> <span class="n">gaierror</span>
+<span class="kn">from</span> <span class="nn">urllib</span> <span class="k">import</span> <span class="n">parse</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">tldextract</span>
+<span class="kn">from</span> <span class="nn">bs4</span> <span class="k">import</span> <span class="n">BeautifulSoup</span>
+<span class="kn">from</span> <span class="nn">eventlet.green.urllib.request</span> <span class="k">import</span> <span class="n">urlopen</span>
+<span class="kn">from</span> <span class="nn">eventlet.timeout</span> <span class="k">import</span> <span class="n">Timeout</span>
+<span class="kn">from</span> <span class="nn">spacy.lang.en</span> <span class="k">import</span> <span class="n">English</span>
+<span class="kn">from</span> <span class="nn">spacy.matcher</span> <span class="k">import</span> <span class="n">Matcher</span>
+<span class="kn">from</span> <span class="nn">spacy.tokens</span> <span class="k">import</span> <span class="n">Doc</span><span class="p">,</span> <span class="n">Token</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">nltk.corpus</span> <span class="k">import</span> <span class="n">stopwords</span>
+    <span class="kn">from</span> <span class="nn">nltk.stem</span> <span class="k">import</span> <span class="n">PorterStemmer</span><span class="p">,</span> <span class="n">WordNetLemmatizer</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+        <span class="s1">&#39;nltk could not be imported, some features will be unavailable&#39;</span><span class="p">)</span>
+
+<span class="n">Token</span><span class="o">.</span><span class="n">set_extension</span><span class="p">(</span><span class="s1">&#39;transformed_text&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">Doc</span><span class="o">.</span><span class="n">set_extension</span><span class="p">(</span><span class="s1">&#39;tokens&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">TIMEOUT</span> <span class="o">=</span> <span class="mf">3.0</span>
+
+
+<span class="n">POS_EMOJIS</span> <span class="o">=</span> <span class="p">[</span><span class="sa">u</span><span class="s1">&#39;😂&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;❤&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;♥&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😍&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😘&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😊&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;👌&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;💕&#39;</span><span class="p">,</span>
+              <span class="sa">u</span><span class="s1">&#39;👏&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😁&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;☺&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;♡&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;👍&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;✌&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😏&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😉&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;🙌&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😄&#39;</span><span class="p">]</span>
+<span class="n">NEG_EMOJIS</span> <span class="o">=</span> <span class="p">[</span><span class="sa">u</span><span class="s1">&#39;😭&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😩&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😒&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😔&#39;</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;😱&#39;</span><span class="p">]</span>
+<span class="n">NEUTRAL_EMOJIS</span> <span class="o">=</span> <span class="p">[</span><span class="sa">u</span><span class="s1">&#39;🙏&#39;</span><span class="p">]</span>
+
+<span class="n">NORMALIZE_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;([a-zA-Z])\1\1+&quot;</span><span class="p">)</span>
+<span class="n">ALPHA_DIGITS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[a-zA-Z0-9_]+&quot;</span><span class="p">)</span>
+<span class="n">TWITTER_HANDLES_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;@\w{1,15}&quot;</span><span class="p">)</span>
+<span class="n">REDDITORS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;u/\w{1,20}&quot;</span><span class="p">)</span>
+<span class="n">SUBREDDITS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;/r/\w{1,20}&quot;</span><span class="p">)</span>
+<span class="n">QUOTES_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^&quot;.*&quot;$&#39;</span><span class="p">)</span>
+<span class="n">BREAKS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[\r\n]+&quot;</span><span class="p">)</span>
+<span class="n">URLS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">&quot;http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&amp;+]|[!*\(\ ),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+&quot;</span><span class="p">)</span>
+
+<span class="n">UTF_CHARS</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;a-z0-9_\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff&#39;</span>
+<span class="n">TAG_EXP</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;(^|[^0-9A-Z&amp;/]+)(#|\uff03)([0-9A-Z_]*[A-Z_]+[</span><span class="si">%s</span><span class="s1">]*)&#39;</span> <span class="o">%</span> <span class="n">UTF_CHARS</span>
+<span class="n">HASHTAGS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">TAG_EXP</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">UNICODE</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+
+<span class="n">URL_SHORTENERS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;bit&#39;</span><span class="p">,</span> <span class="s1">&#39;goo&#39;</span><span class="p">,</span> <span class="s1">&#39;tinyurl&#39;</span><span class="p">]</span>
+
+<span class="n">DECONTRACTIONS</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="s2">&quot;won&#39;t&quot;</span><span class="p">,</span> <span class="s2">&quot;will not&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;can&#39;t&quot;</span><span class="p">,</span> <span class="s2">&quot;can not&quot;</span><span class="p">),</span>
+                              <span class="p">(</span><span class="s2">&quot;n&#39;t&quot;</span><span class="p">,</span> <span class="s2">&quot; not&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;&#39;re&quot;</span><span class="p">,</span> <span class="s2">&quot; are&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;&#39;s&quot;</span><span class="p">,</span> <span class="s2">&quot; is&quot;</span><span class="p">),</span>
+                              <span class="p">(</span><span class="s2">&quot;&#39;d&quot;</span><span class="p">,</span> <span class="s2">&quot; would&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;&#39;ll&quot;</span><span class="p">,</span> <span class="s2">&quot; will&quot;</span><span class="p">),</span>
+                              <span class="p">(</span><span class="s2">&quot;&#39;t&quot;</span><span class="p">,</span> <span class="s2">&quot; not&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;&#39;ve&quot;</span><span class="p">,</span> <span class="s2">&quot; have&quot;</span><span class="p">),</span>
+                              <span class="p">(</span><span class="s2">&quot;&#39;m&quot;</span><span class="p">,</span> <span class="s2">&quot; am&quot;</span><span class="p">)])</span>
+
+<span class="n">DATA_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)),</span>
+                         <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">))</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_PATH</span><span class="p">,</span> <span class="s1">&#39;emojis_utf.json&#39;</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">EMOJIS_UTF</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_PATH</span><span class="p">,</span> <span class="s1">&#39;emojis_unicode.json&#39;</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">EMOJIS_UNICODE</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_PATH</span><span class="p">,</span> <span class="s1">&#39;latin_chars.json&#39;</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">LATIN_CHARS</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+<span class="n">EMOJIS_UTF_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">x&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+<span class="n">EMOJIS_UNICODE_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;u\+&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+<span class="n">EMOJIS_UTF_NOSPACE_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?&lt;!x..)(</span><span class="se">\\</span><span class="s1">x)&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+<span class="n">EMOJIS_UNICODE_NOSPACE_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\D{2,})(U\+)&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+<span class="n">LATIN_CHARS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">xe2</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+
+<span class="n">EMOJIS_UTF_PATS</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">EMOJIS_UTF</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">EMOJIS_UTF_PATS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+<span class="n">EMOJIS_UNICODE_PATS</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">EMOJIS_UNICODE</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">EMOJIS_UNICODE_PATS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+<span class="n">LATIN_CHARS_PATS</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">LATIN_CHARS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">LATIN_CHARS_PATS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">alpha_digits_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">ALPHA_DIGITS_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">hashtag_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">HASHTAGS_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">twitter_handle_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">TWITTER_HANDLES_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">retokenize_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">text</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="n">text</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">text</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> \
+            <span class="ow">and</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span> <span class="ow">and</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">batch</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">ndx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">iterable</span><span class="p">[</span><span class="n">ndx</span><span class="p">:</span><span class="nb">min</span><span class="p">(</span><span class="n">ndx</span> <span class="o">+</span> <span class="n">n</span><span class="p">,</span> <span class="n">length</span><span class="p">)]</span>
+
+
+<span class="k">def</span> <span class="nf">unshorten_url</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">url_shorteners</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="c1"># Fast URL domain extractor</span>
+    <span class="n">domain</span> <span class="o">=</span> <span class="n">tldextract</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">domain</span>
+    <span class="k">if</span> <span class="n">url_shorteners</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">domain</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">url_shorteners</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">domain</span>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse</span><span class="o">.</span><span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">scheme</span> <span class="o">==</span> <span class="s1">&#39;http&#39;</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">netloc</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">parsed</span><span class="o">.</span><span class="n">scheme</span> <span class="o">==</span> <span class="s1">&#39;https&#39;</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">HTTPSConnection</span><span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">netloc</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">domain</span>
+    <span class="n">resource</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">path</span>
+    <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">query</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="n">resource</span> <span class="o">+=</span> <span class="s2">&quot;?&quot;</span> <span class="o">+</span> <span class="n">parsed</span><span class="o">.</span><span class="n">query</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">h</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s1">&#39;HEAD&#39;</span><span class="p">,</span> <span class="n">resource</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TimeoutError</span><span class="p">,</span> <span class="ne">ConnectionRefusedError</span><span class="p">,</span> <span class="n">gaierror</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Connection error for </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">domain</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getresponse</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">//</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="s1">&#39;Location&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">unshorten_url</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="s1">&#39;Location&#39;</span><span class="p">),</span>
+                             <span class="n">URL_SHORTENERS</span><span class="p">,</span> <span class="n">verbose</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">domain</span>
+
+
+<span class="k">def</span> <span class="nf">get_url_title</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">Timeout</span><span class="p">(</span><span class="n">TIMEOUT</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;text/html&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Url </span><span class="si">{}</span><span class="s2"> is not a text/html page&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
+                <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+            <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="s2">&quot;lxml&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Couldn&#39;t extract title from url </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">soup</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">soup</span><span class="o">.</span><span class="n">title</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">soup</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">string</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">soup</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">string</span>
+
+
+<span class="k">def</span> <span class="nf">get_twitter_realname</span><span class="p">(</span><span class="n">twitter_handle</span><span class="p">):</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://twitter.com/&#39;</span> <span class="o">+</span> <span class="n">twitter_handle</span><span class="p">)</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="s2">&quot;lxml&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">soup</span><span class="o">.</span><span class="n">title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">realname</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">realname</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="s1">&#39;Twitter&#39;</span> <span class="ow">in</span> <span class="n">realname</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">realname</span>
+
+
+<div class="viewcode-block" id="CrazyTokenizer"><a class="viewcode-back" href="../apis/tokenizer.html#tokenizer.CrazyTokenizer">[docs]</a><span class="k">class</span> <span class="nc">CrazyTokenizer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tokenizer with Reddit- and Twitter-specific options</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lowercase : bool, optional</span>
+<span class="sd">        If True, lowercase all tokens. Defaults to True.</span>
+
+<span class="sd">    keepcaps: bool, optional</span>
+<span class="sd">        If True, keep ALL CAPS WORDS uppercased. Defaults to False.</span>
+
+<span class="sd">    normalize: int or bool, optional</span>
+<span class="sd">        If not False, perform normalization of repeated charachers</span>
+<span class="sd">        (&quot;awesoooooome&quot; -&gt; &quot;awesooome&quot;). The value of parameter</span>
+<span class="sd">        determines the number of occurences to keep. Defaults to 3.</span>
+
+<span class="sd">    ignorequotes: bool, optional</span>
+<span class="sd">        If True, ignore tokens contained within double quotes.</span>
+<span class="sd">        Defaults to False.</span>
+
+<span class="sd">    ignorestopwords: str, list, or boolean, optional</span>
+<span class="sd">        Whether to ignore stopwords</span>
+
+<span class="sd">        - str: language to get a list of stopwords for from NLTK package</span>
+<span class="sd">        - list: list of stopwords to remove</span>
+<span class="sd">        - True: use built-in list of the english stop words</span>
+<span class="sd">        - False: keep all tokens</span>
+
+<span class="sd">        Defaults to False</span>
+
+<span class="sd">    stem: {False, &#39;stem&#39;, &#39;lemm&#39;}, optional</span>
+<span class="sd">        Whether to perform word stemming</span>
+
+<span class="sd">        - False: do not perform word stemming</span>
+<span class="sd">        - &#39;stem&#39;: use PorterStemmer from NLTK package</span>
+<span class="sd">        - &#39;lemm&#39;: use WordNetLemmatizer from NLTK package</span>
+
+<span class="sd">    removepunct: bool, optional</span>
+<span class="sd">        If True, remove punctuation tokens. Defaults to True.</span>
+
+<span class="sd">    removebreaks: bool, optional</span>
+<span class="sd">        If True, remove linebreak tokens. Defaults to True.</span>
+
+<span class="sd">    decontract: bool, optional</span>
+<span class="sd">        If True, attempt to expand certain contractions. Defaults to False.</span>
+<span class="sd">        Example: &quot;&#39;ll&quot; -&gt; &quot; will&quot;</span>
+
+<span class="sd">    splithashtags: bool, optional</span>
+<span class="sd">        If True, split hashtags according to word frequency.</span>
+
+<span class="sd">        Example: &quot;#vladimirputinisthebest&quot; -&gt; &quot;vladimir putin is the best&quot;</span>
+
+<span class="sd">        Defaults to False.</span>
+
+<span class="sd">        Note: it will not do anything if &quot;hashtags&quot; argument is not False</span>
+
+<span class="sd">    hashtags, numbers, subreddits, reddit_usernames, emails:</span>
+<span class="sd">    False or str, optional</span>
+<span class="sd">        Replacement of the different types of tokens</span>
+
+<span class="sd">        - False: leaves these tokens intact</span>
+<span class="sd">        - str: replacement token</span>
+<span class="sd">        - &#39;&#39;: removes all occurrences of these tokens</span>
+
+<span class="sd">    twitter_handles: False, &#39;realname&#39; or str, optional</span>
+<span class="sd">        Replacement of twitter handles</span>
+
+<span class="sd">        - False: do nothing</span>
+<span class="sd">        - str: replacement token</span>
+<span class="sd">        - &#39;realname&#39;: replace with the real screen name of Twitter account</span>
+
+<span class="sd">    urls: False or str, optional</span>
+<span class="sd">        Replacement of parsed URLs</span>
+
+<span class="sd">        - False: leave URL intact</span>
+<span class="sd">        - str: replacement token</span>
+<span class="sd">        - dict: replace all URLs stored in keys with the corresponding values</span>
+<span class="sd">        - &#39;&#39;: removes all occurrences of these tokens</span>
+<span class="sd">        - &#39;domain&#39;: extract domain (&quot;http://cnn.com&quot; -&gt; &quot;cnn&quot;)</span>
+<span class="sd">        - &#39;domain_unwrap_fast&#39;: extract domain after unwraping links</span>
+<span class="sd">        for a list of URL shorteners (goo.gl, t.co, bit.ly, tinyurl.com)</span>
+<span class="sd">        - &#39;domain_unwrap&#39;: extract domain after unwraping all links</span>
+<span class="sd">        - &#39;title&#39;: extract and tokenize title of each link after unwraping it</span>
+
+<span class="sd">        Defaults to False.</span>
+
+<span class="sd">    extra_patterns: None or list of tuples, optional</span>
+<span class="sd">        Replacement of any user-supplied extra patterns.</span>
+<span class="sd">        Tuples must have the following form: (name, re_pattern, replacement_token):</span>
+
+<span class="sd">        - name (str): name of the pattern</span>
+<span class="sd">        - re_pattern (_sre.SRE_Pattern): compiled re pattern</span>
+<span class="sd">        - replacement_token (str): replacement token</span>
+
+<span class="sd">        Defaults to None</span>
+
+<span class="sd">    keep_untokenized: None or list, optional</span>
+<span class="sd">        List of expressions to keep untokenized</span>
+
+<span class="sd">        Example: [&quot;New York&quot;, &quot;Los Angeles&quot;, &quot;San Francisco&quot;]</span>
+
+<span class="sd">    whitespaces_to_underscores: boolean, optional</span>
+<span class="sd">        If True, replace all whitespace characters with</span>
+<span class="sd">        underscores in the final tokens. Defaults to True.</span>
+
+<span class="sd">    remove_nonunicode: boolean, optional</span>
+<span class="sd">        If True, remove all non-unicode characters. Defaults to False.</span>
+
+<span class="sd">    pos_emojis, neg_emojis, neutral_emojis: None, True, or list, optional</span>
+<span class="sd">        Replace positive, negative, and neutral emojis with the special tokens</span>
+
+<span class="sd">        - None: do not perform replacement</span>
+<span class="sd">        - True: perform replacement of the default lists of emojis</span>
+<span class="sd">        - list: list of emojis to replace</span>
+
+<span class="sd">    print_url_warnings: bool, optional</span>
+<span class="sd">        If True, print URL-related warnings. Defaults to False.</span>
+
+<span class="sd">    latin_chars_fix: bool, optional</span>
+<span class="sd">        Try applying this fix if you have a lot of \\xe2\\x80\\x99-like</span>
+<span class="sd">        or U+1F601-like strings in your data. Defaults to False.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lowercase</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">keepcaps</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                 <span class="n">ignorequotes</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">ignorestopwords</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stem</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">removepunct</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">removebreaks</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">decontract</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">splithashtags</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">twitter_handles</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">urls</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">hashtags</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">numbers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">subreddits</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">reddit_usernames</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">emails</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extra_patterns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">keep_untokenized</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">whitespaces_to_underscores</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">remove_nonunicode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">pos_emojis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">neg_emojis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">neutral_emojis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">print_url_warnings</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">latin_chars_fix</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span> <span class="o">=</span> <span class="n">English</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_merging_matcher</span> <span class="o">=</span> <span class="n">Matcher</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span> <span class="o">=</span> <span class="n">Matcher</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_realnames</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stopwords</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">alpha_digits_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">alpha_digits_check</span><span class="p">)</span>
+        <span class="n">hashtag_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">hashtag_check</span><span class="p">)</span>
+        <span class="n">twitter_handle_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">twitter_handle_check</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_merging_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="s1">&#39;HASHTAG&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;#&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;IS_ASCII&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_merging_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="s1">&#39;SUBREDDIT&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="p">[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;/r&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;/&#39;</span><span class="p">},</span> <span class="p">{</span><span class="n">alpha_digits_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}],</span>
+            <span class="p">[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;r&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;/&#39;</span><span class="p">},</span> <span class="p">{</span><span class="n">alpha_digits_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_merging_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;REDDIT_USERNAME&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span>
+                                  <span class="p">[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;/u&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;/&#39;</span><span class="p">},</span>
+                                      <span class="p">{</span><span class="n">alpha_digits_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}],</span>
+                                  <span class="p">[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;u&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;/&#39;</span><span class="p">},</span>
+                                   <span class="p">{</span><span class="n">alpha_digits_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ignorestopwords</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;nltk&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_stopwords</span> <span class="o">=</span> <span class="n">stopwords</span><span class="o">.</span><span class="n">words</span><span class="p">(</span><span class="n">ignorestopwords</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Language </span><span class="si">{}</span><span class="s1"> was not found by NLTK&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ignorestopwords</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">ignorestopwords</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;STOPWORDS&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_token</span><span class="p">,</span>
+                              <span class="p">[{</span><span class="s1">&#39;IS_STOP&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ignorestopwords</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_stopwords</span> <span class="o">=</span> <span class="p">[</span><span class="n">word</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">ignorestopwords</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">ignorestopwords</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Type </span><span class="si">{}</span><span class="s1"> is not supported by ignorestopwords parameter&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="nb">type</span><span class="p">(</span><span class="n">ignorestopwords</span><span class="p">)))</span>
+
+        <span class="k">if</span> <span class="n">lowercase</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">keepcaps</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;LOWERCASE&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lowercase</span><span class="p">,</span>
+                              <span class="p">[{</span><span class="s1">&#39;IS_LOWER&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}])</span>
+        <span class="k">elif</span> <span class="n">lowercase</span> <span class="ow">and</span> <span class="n">keepcaps</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;LOWERCASE&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lowercase</span><span class="p">,</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s1">&#39;IS_LOWER&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;IS_UPPER&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}])</span>
+
+        <span class="k">if</span> <span class="n">removepunct</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;PUNCTUATION&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_token</span><span class="p">,</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s1">&#39;IS_PUNCT&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+
+        <span class="k">if</span> <span class="n">removebreaks</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">break_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">BREAKS_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+            <span class="n">break_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">break_check</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;BREAK&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_token</span><span class="p">,</span> <span class="p">[{</span><span class="n">break_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+
+        <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">normalize_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">NORMALIZE_RE</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+            <span class="n">normalize_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">normalize_check</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;NORMALIZE&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize</span><span class="p">,</span>
+                              <span class="p">[{</span><span class="n">normalize_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+
+        <span class="k">if</span> <span class="n">numbers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;NUMBER&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span>
+                              <span class="p">[{</span><span class="s1">&#39;LIKE_NUM&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;NUMBER&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">numbers</span>
+
+        <span class="k">if</span> <span class="n">urls</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">urls</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;domain&#39;</span><span class="p">,</span> <span class="s1">&#39;domain_unwrap_fast&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;domain_unwrap&#39;</span><span class="p">,</span> <span class="s1">&#39;title&#39;</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_urls</span> <span class="o">=</span> <span class="n">urls</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;URL&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_url</span><span class="p">,</span> <span class="p">[</span>
+                    <span class="p">{</span><span class="s1">&#39;LIKE_URL&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">urls</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span> <span class="o">=</span> <span class="n">urls</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_urls</span> <span class="o">=</span> <span class="s1">&#39;domain_unwrap_fast&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;URL&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_url</span><span class="p">,</span> <span class="p">[</span>
+                    <span class="p">{</span><span class="s1">&#39;LIKE_URL&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;URL&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span>
+                                  <span class="p">[{</span><span class="s1">&#39;LIKE_URL&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;URL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">urls</span>
+
+        <span class="k">if</span> <span class="n">emails</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;EMAIL&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span>
+                              <span class="p">[{</span><span class="s1">&#39;LIKE_EMAIL&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;EMAIL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">emails</span>
+
+        <span class="k">if</span> <span class="n">twitter_handles</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">twitter_handles</span> <span class="o">!=</span> <span class="s1">&#39;realname&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;TWITTER_HANDLE&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span> <span class="p">[</span>
+                    <span class="p">{</span><span class="n">twitter_handle_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;TWITTER_HANDLE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">twitter_handles</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;TWITTER_HANDLE&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_realname</span><span class="p">,</span> <span class="p">[</span>
+                    <span class="p">{</span><span class="n">twitter_handle_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+
+        <span class="k">if</span> <span class="n">reddit_usernames</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">reddit_username_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">REDDITORS_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+            <span class="n">reddit_username_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span>
+                <span class="n">reddit_username_check</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;REDDIT_USERNAME&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span> <span class="p">[</span>
+                <span class="p">{</span><span class="n">reddit_username_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;REDDIT_USERNAME&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">reddit_usernames</span>
+
+        <span class="k">if</span> <span class="n">subreddits</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">subreddit_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">SUBREDDITS_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+            <span class="n">subreddit_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">subreddit_check</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;SUBREDDIT&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span>
+                              <span class="p">[{</span><span class="n">subreddit_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;SUBREDDIT&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">subreddits</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">hashtags</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">or</span> <span class="n">splithashtags</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;HASHTAG&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hashtag_postprocess</span><span class="p">,</span> <span class="p">[</span>
+                <span class="p">{</span><span class="n">hashtag_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+            <span class="k">if</span> <span class="n">splithashtags</span><span class="p">:</span>
+                <span class="n">file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_PATH</span><span class="p">,</span> <span class="s1">&#39;wordsfreq.txt&#39;</span><span class="p">)</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_words</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_wordcost</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">log</span><span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_words</span><span class="p">))))</span>
+                                      <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_words</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_maxword</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_words</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">ignorequotes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_merging_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;QUOTE&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">},</span> <span class="p">{</span>
+                <span class="s1">&#39;OP&#39;</span><span class="p">:</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;IS_ASCII&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">}])</span>
+
+            <span class="k">def</span> <span class="nf">doublequote_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">QUOTES_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+            <span class="n">doublequote_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">doublequote_check</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;DOUBLE_QUOTES&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_token</span><span class="p">,</span> <span class="p">[</span>
+                <span class="p">{</span><span class="n">doublequote_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stopwords</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">stopword_check</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stopwords</span><span class="p">)</span>
+            <span class="n">stopword_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">stopword_check</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;STOPWORD&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_token</span><span class="p">,</span>
+                              <span class="p">[{</span><span class="n">stopword_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+
+        <span class="k">if</span> <span class="n">keep_untokenized</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keep_untokenized</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;keep_untokenized has to be either None or a list&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">phrase</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">keep_untokenized</span><span class="p">):</span>
+                <span class="n">phrase_tokens</span> <span class="o">=</span> <span class="n">phrase</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+                <span class="n">rule</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">phrase_tokens</span><span class="p">:</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;LOWER&#39;</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">lower</span><span class="p">()})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_merging_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;RULE_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="n">rule</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">pos_emojis</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pos_emojis</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">pos_emojis</span> <span class="o">=</span> <span class="n">POS_EMOJIS</span>
+            <span class="n">pos_patterns</span> <span class="o">=</span> <span class="p">[[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="n">emoji</span><span class="p">}]</span> <span class="k">for</span> <span class="n">emoji</span> <span class="ow">in</span> <span class="n">pos_emojis</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;HAPPY&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span> <span class="o">*</span><span class="n">pos_patterns</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;HAPPY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;POS_EMOJI&#39;</span>
+
+        <span class="k">if</span> <span class="n">neg_emojis</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">neg_emojis</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">neg_emojis</span> <span class="o">=</span> <span class="n">NEG_EMOJIS</span>
+            <span class="n">neg_patterns</span> <span class="o">=</span> <span class="p">[[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="n">emoji</span><span class="p">}]</span> <span class="k">for</span> <span class="n">emoji</span> <span class="ow">in</span> <span class="n">neg_emojis</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;SAD&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span> <span class="o">*</span><span class="n">neg_patterns</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;SAD&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;NEG_EMOJI&#39;</span>
+
+        <span class="k">if</span> <span class="n">neutral_emojis</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">neutral_emojis</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">neutral_emojis</span> <span class="o">=</span> <span class="n">NEUTRAL_EMOJIS</span>
+            <span class="n">neutral_patterns</span> <span class="o">=</span> <span class="p">[[{</span><span class="s1">&#39;ORTH&#39;</span><span class="p">:</span> <span class="n">emoji</span><span class="p">}]</span> <span class="k">for</span> <span class="n">emoji</span> <span class="ow">in</span> <span class="n">neutral_emojis</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;NEUTRAL&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span> <span class="o">*</span><span class="n">neutral_patterns</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="s1">&#39;NEUTRAL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;NEUTRAL_EMOJI&#39;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">extra_patterns</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_flags</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">re_pattern</span><span class="p">,</span> <span class="n">replacement_token</span> <span class="ow">in</span> <span class="n">extra_patterns</span><span class="p">:</span>
+                <span class="k">def</span> <span class="nf">flag</span><span class="p">(</span><span class="n">text</span><span class="p">):</span> <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">re_pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_flags</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">flag</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_token</span><span class="p">,</span>
+                                  <span class="p">[{</span><span class="bp">self</span><span class="o">.</span><span class="n">_flags</span><span class="p">[</span><span class="n">name</span><span class="p">]:</span> <span class="kc">True</span><span class="p">}])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">replacement_token</span>
+
+        <span class="k">if</span> <span class="n">stem</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;nltk&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">stem</span> <span class="o">==</span> <span class="s1">&#39;stem&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_stemmer</span> <span class="o">=</span> <span class="n">PorterStemmer</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">stem</span> <span class="o">==</span> <span class="s1">&#39;lemm&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_stemmer</span> <span class="o">=</span> <span class="n">WordNetLemmatizer</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Stemming method </span><span class="si">{}</span><span class="s1"> is not supported&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stem</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;WORD_TO_STEM&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stem_word</span><span class="p">,</span>
+                              <span class="p">[{</span><span class="s1">&#39;IS_ALPHA&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}])</span>
+
+        <span class="n">retokenize_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">add_flag</span><span class="p">(</span><span class="n">retokenize_check</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;RETOKENIZE&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_retokenize</span><span class="p">,</span>
+                          <span class="p">[{</span><span class="n">retokenize_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;IS_PUNCT&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="s1">&#39;LIKE_URL&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;LIKE_EMAIL&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="s1">&#39;LIKE_NUM&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="n">hashtag_flag</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="n">twitter_handle_flag</span><span class="p">:</span> <span class="kc">False</span><span class="p">}])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">add_pipe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_merge_doc</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;merge_doc&#39;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">add_pipe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_match_doc</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;match_doc&#39;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="o">.</span><span class="n">add_pipe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_postproc_doc</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;postproc_doc&#39;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_lowercase</span><span class="p">(</span><span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># Lowercase tokens</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_stem_word</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># Stem tokens</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;stem&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;stem&#39;</span><span class="p">:</span>
+                <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stemmer</span><span class="o">.</span><span class="n">stem</span><span class="p">(</span>
+                    <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;stem&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;lemm&#39;</span><span class="p">:</span>
+                <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stemmer</span><span class="o">.</span><span class="n">lemmatize</span><span class="p">(</span>
+                    <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># Normalize repeating symbols</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">NORMALIZE_RE</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\1&quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;normalize&#39;</span><span class="p">],</span>
+                                                      <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_process_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># Process found URLs</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="n">found_urls</span> <span class="o">=</span> <span class="n">URLS_RE</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">found_urls</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="p">:</span>
+                    <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="p">[</span><span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_urls</span> <span class="o">==</span> <span class="s1">&#39;domain&#39;</span><span class="p">:</span>
+                    <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">tldextract</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span>
+                        <span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">domain</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_urls</span> <span class="o">!=</span> <span class="s1">&#39;title&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_urls</span> <span class="o">==</span> <span class="s1">&#39;domain_unwrap&#39;</span><span class="p">:</span>
+                        <span class="n">domain</span> <span class="o">=</span> <span class="n">unshorten_url</span><span class="p">(</span>
+                            <span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;print_url_warnings&#39;</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">domain</span> <span class="o">=</span> <span class="n">unshorten_url</span><span class="p">(</span>
+                            <span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">URL_SHORTENERS</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;print_url_warnings&#39;</span><span class="p">])</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="p">[</span><span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">domain</span>
+                    <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">domain</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_urls</span> <span class="o">==</span> <span class="s1">&#39;title&#39;</span><span class="p">:</span>
+                    <span class="n">domain</span> <span class="o">=</span> <span class="n">unshorten_url</span><span class="p">(</span><span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">URL_SHORTENERS</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">domain</span> <span class="o">!=</span> <span class="s1">&#39;twitter&#39;</span><span class="p">:</span>
+                        <span class="n">title</span> <span class="o">=</span> <span class="n">get_url_title</span><span class="p">(</span>
+                            <span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;print_url_warnings&#39;</span><span class="p">])</span>
+                        <span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">URLS_RE</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">title</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                    <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">title</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="p">[</span><span class="n">found_urls</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">title</span>
+
+    <span class="k">def</span> <span class="nf">_get_realname</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># get real name from the twitter handle</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">tok</span><span class="o">.</span><span class="n">text</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_realnames</span><span class="p">:</span>
+                <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_realnames</span><span class="p">[</span><span class="n">tok</span><span class="o">.</span><span class="n">text</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">handle</span> <span class="o">=</span> <span class="n">get_twitter_realname</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                <span class="n">realname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">TWITTER_HANDLES_RE</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">handle</span><span class="p">))</span>
+                <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">realname</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_realnames</span><span class="p">[</span><span class="n">tok</span><span class="o">.</span><span class="n">text</span><span class="p">]</span> <span class="o">=</span> <span class="n">realname</span>
+
+    <span class="k">def</span> <span class="nf">_replace_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># Replace tokens with something else</span>
+        <span class="n">match_id</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="n">replacement_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replacements</span><span class="p">[</span><span class="n">doc</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">strings</span><span class="p">[</span><span class="n">match_id</span><span class="p">]]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">replacement_token</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_remove_token</span><span class="p">(</span><span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># Remove tokens</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">_retokenize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># Retokenize</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">text</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;([#@])&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39; \1&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\s{2,}&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_infer_spaces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="c1"># Infer location of spaces in hashtags</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[^\w\s]&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">best_match</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+            <span class="c1"># Find the best match for the first i characters</span>
+            <span class="c1"># assuming costs has been built for the first (i-1) characters</span>
+            <span class="n">candidates</span> <span class="o">=</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">cost</span><span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_maxword</span><span class="p">):</span><span class="n">i</span><span class="p">]))</span>
+            <span class="k">return</span> <span class="nb">min</span><span class="p">((</span><span class="n">c</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wordcost</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span><span class="n">i</span><span class="p">],</span>
+                                               <span class="mf">9e999</span><span class="p">),</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">)</span>
+
+        <span class="n">cost</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">cur_cost</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">best_match</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="n">cost</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cur_cost</span><span class="p">)</span>
+
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cur_cost</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">best_match</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">cur_cost</span> <span class="o">==</span> <span class="n">cost</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">k</span><span class="p">:</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">i</span> <span class="o">-=</span> <span class="n">k</span>
+
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_hashtag_postprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+        <span class="c1"># Process hashtags</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">span</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;hashtags&#39;</span><span class="p">]:</span>
+                <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;hashtags&#39;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;splithashtags&#39;</span><span class="p">]:</span>
+                <span class="n">poss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_infer_spaces</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+                <span class="k">if</span> <span class="n">poss</span><span class="p">:</span>
+                    <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">poss</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">text</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_decontract</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+        <span class="c1"># Expand contractions</span>
+        <span class="k">for</span> <span class="n">contraction</span><span class="p">,</span> <span class="n">decontraction</span> <span class="ow">in</span> <span class="n">DECONTRACTIONS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">contraction</span><span class="p">,</span> <span class="n">decontraction</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">text</span>
+
+    <span class="k">def</span> <span class="nf">_preprocess_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="c1"># Do some preprocessing</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;remove_nonunicode&#39;</span><span class="p">]:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;unicode-escape&#39;</span><span class="p">)</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">string</span><span class="o">.</span><span class="n">printable</span><span class="p">,</span> <span class="n">text</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">UnicodeDecodeError</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="s1">&#39;(UnicodeDecodeError while trying to remove non-unicode characters&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;decontract&#39;</span><span class="p">]:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decontract</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;latin_chars_fix&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">EMOJIS_UTF_RE</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">EMOJIS_UTF_NOSPACE_RE</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39; \1&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">utf_code</span><span class="p">,</span> <span class="n">emoji</span> <span class="ow">in</span> <span class="n">EMOJIS_UTF</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">text</span> <span class="o">=</span> <span class="n">EMOJIS_UTF_PATS</span><span class="p">[</span><span class="n">utf_code</span><span class="p">]</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">emoji</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">EMOJIS_UNICODE_RE</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">EMOJIS_UNICODE_NOSPACE_RE</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\1 \2&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">utf_code</span><span class="p">,</span> <span class="n">emoji</span> <span class="ow">in</span> <span class="n">EMOJIS_UNICODE</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">text</span> <span class="o">=</span> <span class="n">EMOJIS_UNICODE_PATS</span><span class="p">[</span><span class="n">utf_code</span><span class="p">]</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">emoji</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">LATIN_CHARS_RE</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">_hex</span><span class="p">,</span> <span class="n">_char</span> <span class="ow">in</span> <span class="n">LATIN_CHARS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">text</span> <span class="o">=</span> <span class="n">LATIN_CHARS_PATS</span><span class="p">[</span><span class="n">_hex</span><span class="p">]</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_char</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.@&#39;</span><span class="p">,</span> <span class="s1">&#39;. @&#39;</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;([*;,!?\(\)\[\]])&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39; \1&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\s{2,}&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_merge_doc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="p">):</span>
+        <span class="c1"># Perform merging for certain types of tokens</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merging_matcher</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="n">spans</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">__</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">matches</span><span class="p">:</span>
+            <span class="n">spans</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">:</span>
+            <span class="n">span</span><span class="o">.</span><span class="n">merge</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">:</span>
+            <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">text</span>
+
+        <span class="k">return</span> <span class="n">doc</span>
+
+    <span class="k">def</span> <span class="nf">_match_doc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="p">):</span>
+        <span class="c1"># Perform all additional processing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_matcher</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">doc</span>
+
+    <span class="k">def</span> <span class="nf">_postproc_doc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="p">):</span>
+        <span class="c1"># Perform postprocessing</span>
+        <span class="n">doc</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">tokens</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">doc</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">tokens</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;whitespaces_to_underscores&#39;</span><span class="p">]:</span>
+                    <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                        <span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+                <span class="n">doc</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">transformed_text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">doc</span>
+
+<div class="viewcode-block" id="CrazyTokenizer.tokenize"><a class="viewcode-back" href="../apis/tokenizer.html#tokenizer.CrazyTokenizer.tokenize">[docs]</a>    <span class="k">def</span> <span class="nf">tokenize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Tokenize document</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        text : str</span>
+<span class="sd">            Document to tokenize</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            List of tokens</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; from redditscore.tokenizer import CrazyTokenizer</span>
+<span class="sd">        &gt;&gt;&gt; tokenizer = CrazyTokenizer(splithashtags=True, hashtags=False)</span>
+<span class="sd">        &gt;&gt;&gt; tokenizer.tokenize(&quot;#makeamericagreatagain&quot;)</span>
+<span class="sd">        [&quot;make&quot;, &quot;america&quot;, &quot;great&quot;, &quot;again&quot;]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Document </span><span class="si">{}</span><span class="s1"> is not a string&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nlp</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">doc</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">tokens</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Evgenii Nikitin.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

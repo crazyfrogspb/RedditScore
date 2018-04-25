@@ -1,0 +1,5 @@
+CrazyTokenizer
+-----------
+
+.. automodule:: tokenizer
+   :members:
