@@ -38,7 +38,8 @@ class Mock(MagicMock):
 
 MOCK_MODULES = ["fastText", "scipy.spatial.distance",
                 "matplotlib.cm", "matplotlib.pyplot", "scipy.cluster.hierarchy",
-                "adjustText", "requests", "tldextract", "bs4", "tweepy"]
+                "adjustText", "requests", "tldextract", "bs4", "tweepy",
+                "spacy.lang.en", "spacy.matcher", "spacy.tokens"]
 
 
 # -- General configuration ------------------------------------------------
