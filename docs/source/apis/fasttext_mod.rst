@@ -1,5 +1,5 @@
 FastTextModel
------------
+-------------
 
 .. automodule:: models.fasttext_mod
    :members:

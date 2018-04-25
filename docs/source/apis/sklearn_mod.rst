@@ -1,5 +1,5 @@
 SklearnModel
------------
+------------
 
 .. automodule:: models.sklearn_mod
    :members:
