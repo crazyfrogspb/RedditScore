@@ -39,7 +39,10 @@ class Mock(MagicMock):
 MOCK_MODULES = ["fastText", "scipy.spatial.distance",
                 "matplotlib.cm", "matplotlib.pyplot", "scipy.cluster.hierarchy",
                 "adjustText", "requests", "tldextract", "bs4", "tweepy",
-                "spacy.lang.en", "spacy.matcher", "spacy.tokens"]
+                "spacy.lang.en", "spacy.matcher", "spacy.tokens", "spacy",
+                "scipy", "matplotlib"]
+
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
 # -- General configuration ------------------------------------------------
