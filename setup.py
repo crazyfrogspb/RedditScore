@@ -15,15 +15,14 @@ except Exception:
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
-    INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.11", "tldextract>=2.1.0", "requests>=2.18.0",
-                        "scikit-learn>=0.19.0", "pandas>=0.22.0", "scipy>=1.0.0", "numpy>=1.14.0",
-                        "matplotlib>=2.2.0", "beautifulsoup4>=4.6.0", "adjustText>=0.6.3",
-                        "eventlet>=0.22.1"]
+    INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.11", "tldextract>=2.1.0",
+                        "requests>=2.18.0", "scikit-learn>=0.19.0",
+                        "pandas>=0.22.0", "scipy>=1.0.0", "numpy>=1.14.0",
+                        "matplotlib>=2.2.0", "beautifulsoup4>=4.6.0",
+                        "adjustText>=0.6.3", "eventlet>=0.22.1"]
 else:
-    INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.11", "tldextract>=2.1.0", "requests>=2.18.0",
-                        "scikit-learn>=0.19.0", "pandas>=0.22.0",
-                        "matplotlib>=2.2.0", "beautifulsoup4>=4.6.0", "adjustText>=0.6.3",
-                        "eventlet>=0.22.1", 'Cython']
+    INSTALL_REQUIRES = ["setuptools", "spacy>=2.0.11", "scikit-learn>=0.19.0",
+                        "pandas>=0.22.0", "eventlet>=0.22.1"]
 
 EXTRAS = {
     "nltk": ["nltk>=3.2.5"],
