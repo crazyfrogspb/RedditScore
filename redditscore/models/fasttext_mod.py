@@ -173,13 +173,6 @@ class FastTextModel(redditmodel.RedditModel):
         Other parameters for fastText model.
         Full description can be found here:
         https://github.com/facebookresearch/fastText
-
-    Attributes
-    ----------
-    model_type : str
-        Model type name
-    _model : FastTextClassifier
-        sklearn-style wrapper for fastText model
     """
 
     def __init__(self, random_state=24, **kwargs):

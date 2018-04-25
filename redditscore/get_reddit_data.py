@@ -2,7 +2,6 @@ import calendar
 import datetime
 import os
 
-import pandas as pd
 from pandas.io import gbq
 
 

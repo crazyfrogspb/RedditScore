@@ -15,7 +15,7 @@ redditscore.models.doc2vec module
 redditscore.models.fasttext module
 ----------------------------------
 
-.. automodule:: redditscore.models.fasttext
+.. automodule:: redditscore.models.fasttext_mod
     :members:
     :undoc-members:
     :show-inheritance:
@@ -23,7 +23,7 @@ redditscore.models.fasttext module
 redditscore.models.neuralnet module
 -----------------------------------
 
-.. automodule:: redditscore.models.neuralnet
+.. automodule:: redditscore.models.nn_mod
     :members:
     :undoc-members:
     :show-inheritance:
@@ -39,7 +39,7 @@ redditscore.models.redditmodel module
 redditscore.models.sklearn module
 ---------------------------------
 
-.. automodule:: redditscore.models.sklearn
+.. automodule:: redditscore.models.sklearn_mod
     :members:
     :undoc-members:
     :show-inheritance:
