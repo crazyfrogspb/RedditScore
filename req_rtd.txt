@@ -4,3 +4,4 @@ keras>=2.1.5
 eventlet>=0.22.1
 requests>=2.18.0
 scipy>=1.0.0
+tensorflow

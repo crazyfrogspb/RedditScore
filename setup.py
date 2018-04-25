@@ -22,7 +22,8 @@ if not on_rtd:
                         "adjustText>=0.6.3", "eventlet>=0.22.1"]
 else:
     INSTALL_REQUIRES = ["setuptools", "scikit-learn>=0.19.0", "scipy>=1.0.0",
-                        "pandas>=0.22.0", "eventlet>=0.22.1", "requests>=2.18.0"]
+                        "pandas>=0.22.0", "eventlet>=0.22.1", "requests>=2.18.0",
+                        "tensorflow"]
 
 EXTRAS = {
     "nltk": ["nltk>=3.2.5"],
