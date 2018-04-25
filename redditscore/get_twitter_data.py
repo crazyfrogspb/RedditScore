@@ -199,6 +199,8 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
             return pd.DataFrame()
 
     alltweets.extend(new_tweets)
+    if not alltweets:
+        return pd.DataFrame()
     oldest = alltweets[-1].id - 1
 
     while len(new_tweets) > 0:
