@@ -41,7 +41,8 @@ MOCK_MODULES = ["fastText", "matplotlib.cm", "matplotlib.pyplot",
                 "spacy.lang.en", "spacy.matcher", "spacy.tokens", "spacy",
                 "matplotlib", "gensim", "gensim.models",
                 "gensim.models.doc2vec", "tensorflow", "tensorflow.python",
-                "tensorflow.python.training", "tensorflow.python.ops"]
+                "tensorflow.python.training", "tensorflow.python.ops",
+                "tensorflow.python.client"]
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
