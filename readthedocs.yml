@@ -4,6 +4,9 @@
 formats:
     - pdf
 
+requirements_file:
+    - req_rtd.txt
+
 python:
     setup_py_install: true
     version: 3.5
