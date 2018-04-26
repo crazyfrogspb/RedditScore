@@ -1,81 +1,78 @@
 import os
 
-import numpy as np
 import pandas as pd
 import pytest
-from sklearn.model_selection import GridSearchCV
 
 from redditscore.models import fasttext_mod, sklearn_mod
 from redditscore.tokenizer import CrazyTokenizer
 
 df = pd.read_csv(os.path.join(os.path.dirname(__file__), '..',
-                              'redditscore', 'data', 'reddit_small_sample.csv'))
+                              'redditscore', 'data',
+                              'reddit_small_sample.csv'))
 
 tokenizer = CrazyTokenizer(urls='domain')
 df['tokens'] = df['body'].apply(tokenizer.tokenize)
 
-political_subs = ['AskTrumpSupporters', 'EnoughTrumpSpam', 'AskThe_Donald',
-                  'conservatives', 'The_Donald', 'politics',
-                  'PoliticalDiscussion', 'hillaryclinton', 'Conservative',
-                  'SandersForPresident', 'Libertarian', 'esist', 'Fuckthealtright',
-                  'democrats', 'HillaryForPrison', 'NeutralPolitics',
-                  'Republican', 'uspolitics', 'Liberal', 'conspiracy']
-alt_subs = ['CoonTown', 'uncensorednews', 'sjwhate', 'PussyPass',
-            'whiteknighting', 'CringeAnarchy', 'KotakuInAction', 'DebateAltRight',
-            'SocialJusticeInAction', 'WhiteRights', 'AntiPOZi',
-            'TumblrInAction', 'altright', '4chan', 'dankmemes',
-            'MGTOW', 'TheRedPill']
+pytest.X = df['tokens']
+pytest.y = df['subreddit']
 
-X = df['tokens']
-y = df['subreddit']
-
-
-def test_model_init():
-    multi_model = sklearn_mod.SklearnModel(
-        model_type='multinomial', alpha=0.1, random_state=24, tfidf=False, ngrams=1)
-    bernoulli_model = sklearn_mod.SklearnModel(
-        model_type='bernoulli', alpha=0.1, random_state=24, tfidf=False, ngrams=1)
-    svm_model = sklearn_mod.SklearnModel(model_type='svm', C=0.1,
-                                         random_state=24, tfidf=False, ngrams=1)
-    fasttext_model = fasttext_mod.FastTextModel(minCount=5)
+pytest.MM = sklearn_mod.SklearnModel(model_type='multinomial', alpha=0.1,
+                                     random_state=24, tfidf=False, ngrams=1)
+pytest.MM.fit(pytest.X, pytest.y)
+pytest.FM = fasttext_mod.FastTextModel(minCount=5)
+pytest.FM.fit(pytest.X, pytest.y)
+pytest.BM = sklearn_mod.SklearnModel(model_type='bernoulli', alpha=0.1,
+                                     random_state=24, tfidf=False, ngrams=1)
+pytest.BM.fit(pytest.X, pytest.y)
+sklearn_mod.SklearnModel(model_type='svm', C=0.1, random_state=24,
+                         tfidf=False, ngrams=1)
 
 
 def test_multimodel():
-    multi_model = sklearn_mod.SklearnModel(model_type='multinomial')
-    multi_model.tune_params(X, y, cv=0.2, scoring='neg_log_loss',
-                            param_grid={'tfidf': [False, True]})
-    multi_model.tune_params(X, y, cv=5, scoring='accuracy',
-                            param_grid={'tfidf': [False, True],
-                                        'alpha': [0.1, 1.0]}, refit=True)
-    multi_model.predict(X)
-    multi_model.predict_proba(X)
+    pytest.MM.tune_params(pytest.X, pytest.y, cv=0.2, scoring='neg_log_loss',
+                          param_grid={'tfidf': [False, True]})
+    pytest.MM.tune_params(pytest.X, pytest.y, cv=5, scoring='accuracy',
+                          param_grid={'tfidf': [False, True],
+                                      'alpha': [0.1, 1.0]}, refit=True)
+    pytest.MM.predict(pytest.X)
+    pytest.MM.predict_proba(pytest.X)
 
 
 def test_bernoulli():
-    bernoulli_model = sklearn_mod.SklearnModel(model_type='bernoulli')
-    bernoulli_model.tune_params(X, y, cv=0.2, scoring='neg_log_loss',
-                                param_grid={'tfidf': [False, True]})
-    bernoulli_model.tune_params(X[0:10], y[0:10], cv=0.2)
-    bernoulli_model.tune_params(X, y, cv=5, scoring='accuracy',
-                                param_grid={'tfidf': [False, True],
-                                            'alpha': [0.1, 1.0]}, refit=True)
-    bernoulli_model.predict(X)
-    bernoulli_model.predict_proba(X)
+    pytest.BM.tune_params(pytest.X, pytest.y, cv=0.2, scoring='neg_log_loss',
+                          param_grid={'tfidf': [False, True]})
+    pytest.BM.tune_params(pytest.X[0:10], pytest.y[0:10], cv=0.2)
+    pytest.BM.tune_params(pytest.X, pytest.y, cv=5, scoring='accuracy',
+                          param_grid={'tfidf': [False, True],
+                                      'alpha': [0.1, 1.0]}, refit=True)
+    pytest.BM.predict(pytest.X)
+    pytest.BM.predict_proba(pytest.X)
 
 
 def test_fasttext_train():
-    fasttext_model = fasttext_mod.FastTextModel(minCount=5)
-    fasttext_model.fit(X, y)
-    fasttext_model.predict(X)
-    fasttext_model.predict_proba(X)
-    fasttext_model.tune_params(X, y, cv=0.2, param_grid={
-                               'step0': {'epoch': [1, 2]},
-                               'step1': {'minCount': [1, 5]}})
+    pytest.FM.predict(pytest.X)
+    pytest.FM.predict_proba(pytest.X)
+    pytest.FM.tune_params(pytest.X, pytest.y, cv=0.2, param_grid={
+        'step0': {'epoch': [1, 2]},
+        'step1': {'minCount': [1, 5]}})
 
 
 def test_step_exception():
-    fasttext_model = fasttext_mod.FastTextModel(minCount=5)
-    with pytest.raises(KeyError) as e_info:
-        fasttext_model.tune_params(X, y, cv=0.2, param_grid={
-                                   'step0': {'epoch': [1, 2]},
-                                   'step2': {'minCount': [1, 5]}})
+    with pytest.raises(KeyError):
+        pytest.FM.tune_params(pytest.X, pytest.y, cv=0.2, param_grid={
+            'step0': {'epoch': [1, 2]},
+            'step2': {'minCount': [1, 5]}})
+
+
+def test_dendrogram():
+    pytest.FM.plot_analytics()
+
+
+def test_save_load():
+    pytest.MM.save_model('multi.pkl')
+    pytest.FM.save_model('fasttext')
+    pytest.MM = sklearn_mod.load_model('multi.pkl')
+    pytest.FM = fasttext_mod.load_model('fasttext')
+    os.remove('multi.pkl')
+    os.remove('fasttext.pkl')
+    os.remove('fasttext.bin')
