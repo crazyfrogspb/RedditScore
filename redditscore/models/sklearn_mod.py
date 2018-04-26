@@ -10,8 +10,7 @@ Copyright (c) 2018 Evgenii Nikitin. All rights reserved.
 This work is licensed under the terms of the MIT license.
 """
 
-import pickle
-
+import dill as pickle
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.naive_bayes import BernoulliNB, MultinomialNB
 from sklearn.pipeline import Pipeline
@@ -37,11 +36,6 @@ def load_model(filepath):
     with open(filepath, 'rb') as f:
         model = pickle.load(f)
     return model
-
-
-def _build_analyzer(ngrams):
-    # Build analyzer for vectorizers for a given ngram range
-    return lambda doc: redditmodel.word_ngrams(doc, (1, ngrams))
 
 
 class SklearnModel(redditmodel.RedditModel):
@@ -109,10 +103,10 @@ class SklearnModel(redditmodel.RedditModel):
 
         if self.tfidf:
             vectorizer = TfidfVectorizer(
-                analyzer=_build_analyzer(self.ngrams))
+                analyzer=self._build_analyzer(self.ngrams))
         else:
             vectorizer = CountVectorizer(
-                analyzer=_build_analyzer(self.ngrams))
+                analyzer=self._build_analyzer(self.ngrams))
 
         self._model = Pipeline([('vectorizer', vectorizer), ('model', model)])
 
@@ -128,4 +122,9 @@ class SklearnModel(redditmodel.RedditModel):
 
         """
         with open(filepath, 'wb') as f:
-            pickle.dump(self, filepath)
+            pickle.dump(self, f)
+
+    @staticmethod
+    def _build_analyzer(ngrams):
+        # Build analyzer for vectorizers for a given ngram range
+        return lambda doc: redditmodel.word_ngrams(doc, (1, ngrams))

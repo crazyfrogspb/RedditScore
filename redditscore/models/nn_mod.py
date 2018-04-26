@@ -1,5 +1,6 @@
 import copy
 
+import dill as pickle
 import numpy as np
 from keras.initializers import RandomNormal
 from keras.layers import Dense, Dropout, Embedding, GlobalAveragePooling1D
@@ -10,7 +11,7 @@ from keras.utils import to_categorical
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import LabelEncoder
 
-from . import redditmodel, sklearn_mod
+from . import redditmodel
 
 
 def reverse_dictionary(dict):
@@ -57,9 +58,14 @@ class MLPModel(redditmodel.RedditModel):
         self._idx2word = {}
         self._encoder = LabelEncoder()
 
+    @staticmethod
+    def _build_analyzer(ngrams):
+        # Build analyzer for vectorizers for a given ngram range
+        return lambda doc: redditmodel.word_ngrams(doc, (1, ngrams))
+
     def _build_vocab(self, X):
         vectorizer = CountVectorizer(
-            analyzer=sklearn_mod._build_analyzer(self.ngrams),
+            analyzer=self._build_analyzer(self.ngrams),
             min_df=self.min_count)
         self._analyzer = vectorizer.build_analyzer()
         vectorizer.fit(X)
