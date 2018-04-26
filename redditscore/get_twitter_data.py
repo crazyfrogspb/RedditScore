@@ -132,19 +132,45 @@ def _grab_even_more_tweets(screen_name, dates, browser, delay=1.0):
     return ids
 
 
-def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
-                get_more=False, browser='Firefox', start_date=None):
+def _authenticate(twitter_creds):
+    try:
+        auth = tweepy.OAuthHandler(
+            twitter_creds['consumer_key'], twitter_creds['consumer_secret'])
+        auth.set_access_token(
+            twitter_creds['access_key'], twitter_creds['access_secret'])
+        api = tweepy.API(auth)
+        return api
+    except KeyError as e:
+        raise Exception(("twitter_creds must contain cosnumer_key,"
+                         " consumer_secret, access_key, and access_secret keys"))
+
+
+def _handle_tweepy_error(e, user):
+    if e.api_code == 34:
+        warnings.warn("{} doesn't exist".format(user))
+    else:
+        warnings.warn('Error encountered for user {}: '.format(
+            user) + str(e))
+    return pd.DataFrame()
+
+
+def grab_tweets(twitter_creds, screen_name=None, user_id=None, timeout=0.1,
+                fields=None, get_more=False, browser='Firefox',
+                start_date=None):
     """
     Get all tweets from the account
 
     Parameters
     ----------
-    screen_name : str
-        Twitter handle to grab tweets for
-
     twitter_creds: dict
         Dictionary with Twitter authentication credentials.
         Has to contain consumer_key, consumer_secret, access_key, access_secret
+
+    screen_name : str, optional
+        Twitter handle to grab tweets for
+
+    user_id: int, optional
+        Twitter user_id to grab tweets for
 
     timeout: float, optional
         Sleeping time between requests
@@ -168,15 +194,19 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
     alltweets: pandas DataFrame
         Pandas Dataframe with all collected tweets
     """
-    try:
-        auth = tweepy.OAuthHandler(
-            twitter_creds['consumer_key'], twitter_creds['consumer_secret'])
-        auth.set_access_token(
-            twitter_creds['access_key'], twitter_creds['access_secret'])
-        api = tweepy.API(auth)
-    except KeyError as e:
-        raise Exception(("twitter_creds must contain cosnumer_key,"
-                         " consumer_secret, access_key, and access_secret keys"))
+    if not (bool(screen_name) != bool(user_id)):
+        raise ValueError('You have to provide either screen_name or user_id')
+
+    api = _authenticate(twitter_creds)
+
+    if user_id:
+        try:
+            u = api.get_user(int(user_id))
+            screen_name = u.screen_name
+        except tweepy.TweepError as e:
+            return _handle_tweepy_error(e, user_id)
+        except ValueError as e:
+            raise ValueError('{} is not a valid user_id'.format(user_id)) from e
 
     if fields is None:
         fields = []
@@ -187,16 +217,11 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
 
     print("Now grabbing tweets for {}".format(screen_name))
     try:
-        new_tweets = api.user_timeline(
-            screen_name=screen_name, count=200, tweet_mode='extended')
+        new_tweets = api.user_timeline(screen_name=screen_name,
+                                       user_id=user_id, count=200,
+                                       tweet_mode='extended')
     except tweepy.TweepError as e:
-        if e.api_code == 34:
-            warnings.warn("{} doesn't exist".format(screen_name))
-            return pd.DataFrame()
-        else:
-            warnings.warn('Error encountered for user {}: '.format(
-                screen_name) + str(e))
-            return pd.DataFrame()
+        return _handle_tweepy_error(e, screen_name)
 
     alltweets.extend(new_tweets)
     if not alltweets:
@@ -238,5 +263,7 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
         full_tweets, columns=(['text', 'id_str', 'created_at', 'retweet'] +
                               fields))
     full_tweets['screen_name'] = screen_name
+    if user_id:
+        full_tweets['user_id'] = user_id
     full_tweets.drop_duplicates('id_str', inplace=True)
     return full_tweets

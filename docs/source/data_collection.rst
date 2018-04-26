@@ -67,7 +67,8 @@ and you're ready to collect the data!
 >>> cred_path = 'twitter_creds.json'
 >>> with open(cred_path) as f:
 >>>   twitter_creds = json.load(f)
->>> df = grab_tweets('crazyfrogspb' twitter_creds)
+>>> df = grab_tweets(twitter_creds, screen_name='crazyfrogspb')
+>>> df = grad_tweets(twitter_creds, user_id=26281810)
 
 There are a few optional arguments that ``grab_tweets`` function takes:
 
