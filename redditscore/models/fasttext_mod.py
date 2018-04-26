@@ -20,7 +20,6 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.exceptions import NotFittedError
 
 from . import redditmodel
 

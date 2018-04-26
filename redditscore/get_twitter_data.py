@@ -86,7 +86,7 @@ def _grab_even_more_tweets(screen_name, dates, browser, delay=1.0):
             raise ValueError('{} browser is not supported')
     except WebDriverException as e:
         raise WebDriverException(('You need to download required driver'
-                                  ' and add it to path')) from e
+                                  ' and add it to PATH')) from e
     except AttributeError as e:
         raise Exception('Check if the browser is installed') from e
     except ValueError as e:
@@ -208,7 +208,8 @@ def grab_tweets(screen_name, twitter_creds, timeout=0.1, fields=None,
                                        max_id=oldest, tweet_mode='extended')
         alltweets.extend(new_tweets)
         oldest = alltweets[-1].id - 1
-        print('{} tweets downloaded'.format(len(alltweets)))
+        if new_tweets:
+            print('{} tweets downloaded'.format(len(alltweets)))
         sleep(timeout)
 
     if get_more and len(new_tweets) == 0 and len(alltweets) > 3200:
