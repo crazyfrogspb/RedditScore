@@ -222,27 +222,7 @@ class FastTextModel(redditmodel.RedditModel):
         self.class_embeddings = emb.loc[self._classes]
         os.remove(path)
         self.fitted = True
-        self._calc_inp_embeddings(X, y)
         return self
-
-    def _calc_inp_embeddings(self, X, y):
-        doc_vectors = np.zeros((len(X), 100))
-        for i, doc in enumerate(X):
-            doc = ' '.join(doc)
-            doc_vectors[i, :] = self._model._model.get_sentence_vector(doc)
-        self.average_vectors_ = pd.DataFrame(doc_vectors).groupby(y).mean()
-        self.max_vectors_ = pd.DataFrame(doc_vectors).groupby(y).max()
-
-    def similarity_scores(self, X):
-        doc_vectors = np.zeros((len(X), 100))
-        for i, doc in enumerate(X):
-            doc = ' '.join(doc)
-            doc_vectors[i, :] = self._model._model.get_sentence_vector(doc)
-        av_scores = pd.DataFrame(
-            1 - cdist(doc_vectors, self.average_vectors_, metric='cosine'), columns=self._classes)
-        max_scores = pd.DataFrame(
-            1 - cdist(doc_vectors, self.max_vectors_, metric='cosine'), columns=self._classes)
-        return av_scores, max_scores
 
     def save_model(self, filepath):
         """Save model to disk.

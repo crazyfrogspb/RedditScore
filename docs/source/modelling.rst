@@ -55,13 +55,9 @@ Using models for prediction is very straightforward:
 
 Both ``predict`` and ``predict_proba`` return pandas DataFrames with class labels as column names.
 
-In addition, you can also calculate cosine similarity between a collection of texts and classes.
->>> av_sim, max_sim = fasttext_model.similarity_scores(X)
-
-
 Model tuning and validation
 ---------------------------
-Each model class has ``cv_score`` and ``tune_params`` methods. You can use these methods to assess the quality of your model 
+Each model class has ``cv_score`` and ``tune_params`` methods. You can use these methods to assess the quality of your model
 and to perform tuning of hyperparameters.
 
 ``cv_score`` method has two optional arguments - ``cv`` and ``scoring``. ``cv`` argument can be:
@@ -93,7 +89,7 @@ Examples:
 >>> fasttext_model.tune_params(X, y, param_grid=param_grid)
 >>> param_grid = {'step0': param_grid, 'step1': {'t': [1e-4, 1e-3, 1e-3]}}
 
-If ``verbose`` is True, messages with grid process results will be printed. 
+If ``verbose`` is True, messages with grid process results will be printed.
 If ``refit`` is True, the model will be refit with the full data after grid search is over.
 
 ``tune_params`` returns a tuple: dictionary with the best found parameters and the best value of the chosen metric.
@@ -110,7 +106,7 @@ For fastText and neural network models, you can visualize resulting class embedd
    :alt: Dengrogram for class embeddings
 
    Dengrogram for class embeddings
-   
+
 .. figure:: figures/dendrogram.png
    :alt: t-SNE visualization
 
