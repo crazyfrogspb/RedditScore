@@ -145,7 +145,8 @@ def unshorten_url(url, url_shorteners=None, verbose=False):
         resource += "?" + parsed.query
     try:
         h.request('HEAD', resource)
-    except (TimeoutError, ConnectionRefusedError, gaierror):
+    except (TimeoutError, ConnectionRefusedError,
+            ConnectionResetError, gaierror):
         if verbose:
             warnings.warn('Connection error for {}'.format(url))
         return domain

@@ -183,7 +183,8 @@ class RedditModel(metaclass=ABCMeta):
             Sequence of labels
 
         param_grid: dict, optional
-            Dictionary with parameters names as keys and lists of parameter settings
+            Dictionary with parameters names as keys and
+            lists of parameter settings as values.
             If None, loads deafult values from JSON file
 
         verbose: bool, optional
