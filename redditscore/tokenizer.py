@@ -421,6 +421,9 @@ class CrazyTokenizer(object):
                     {twitter_handle_flag: True}])
                 self._replacements['TWITTER_HANDLE'] = twitter_handles
             else:
+                with open(os.path.join(DATA_PATH, 'realnames.json')) as f:
+                    self._realnames = json.load(f)
+                    print('huy')
                 self._matcher.add('TWITTER_HANDLE', self._get_realname, [
                     {twitter_handle_flag: True}])
 
