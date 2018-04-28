@@ -142,19 +142,22 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         # Return predictions
-        docs = [' '.join(doc) for doc in X]
-        predictions = self._model.predict(docs, k=1)[0]
-        predictions = np.array([pred[0][len(self.label):]
+        predictions = []
+        for doc in X:
+            predictions.append(self._model.predict(' '.join(doc), k=1)[0][0])
+        predictions = np.array([pred[len(self.label):]
                                 for pred in predictions])
         return predictions
 
     def predict_proba(self, X):
         # Return predicted probabilities
-        docs = [' '.join(doc) for doc in X]
-        predictions = zip(*self._model.predict(docs, k=self._num_classes))
+        predictions = []
+        for doc in X:
+            pred = self._model.predict(' '.join(doc), k=self._num_classes)
+            predictions.append(list(zip(*pred)))
         probabilities = []
         for pred in predictions:
-            d = {key[len(self.label):]: value for key, value in zip(*pred)}
+            d = {key[len(self.label):]: value for key, value in pred}
             probabilities.append(d)
         probabilities = pd.DataFrame(probabilities).fillna(1e-10)
 
