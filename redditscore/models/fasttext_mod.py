@@ -19,6 +19,7 @@ import fastText
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.preprocessing import QuantileTransformer
 
 from . import redditmodel
 
@@ -178,8 +179,7 @@ class FastTextModel(redditmodel.RedditModel):
         self.model_type = 'fasttext'
         self._score_scaler = None
         self._model = FastTextClassifier(**kwargs)
-        self.average_vectors_ = None
-        self.max_vectors_ = None
+        self._transformer = QuantileTransformer(random_state=random_state)
 
     def set_params(self, **params):
         """Set parameters of the model
@@ -207,8 +207,8 @@ class FastTextModel(redditmodel.RedditModel):
         FastTextModel
             Fitted model object
         """
-        X = np.array(X)
         y = np.array(y)
+        X = np.array(X)
         self._classes = np.array(sorted(np.unique(y)))
         self._model.fit(X, y)
         fd, path = tempfile.mkstemp()
@@ -221,7 +221,14 @@ class FastTextModel(redditmodel.RedditModel):
         self.class_embeddings = emb.loc[self._classes]
         os.remove(path)
         self.fitted = True
+        probabilities = self.predict_proba(X)
+        self._transformer.fit(probabilities)
         return self
+
+    def calculate_scores(self, X):
+        probabilities = self.predict_proba(X)
+        return pd.DataFrame(self._transformer.transform(probabilities),
+                            columns=self._classes)
 
     def save_model(self, filepath):
         """Save model to disk.
