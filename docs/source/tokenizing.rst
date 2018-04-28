@@ -61,9 +61,9 @@ Ignoring quotes
 ^^^^^^^^^^^^^^^
 People often quote other comments or tweets, but it doesn't mean that they
 endorse the original message. Removing the content of the quotes can help
-you to get rid of that. Just set ``ignorequotes=True`` (False by deafult).
+you to get rid of that. Just set ``ignore_quotes=True`` (False by deafult).
 
->>> tokenizer = CrazyTokenizer(ignorequotes=True)
+>>> tokenizer = CrazyTokenizer(ignore_quotes=True)
 >>> tokenizer.tokenize('And then she said: "I voted for Donald Trump"')
 ['and', 'then', 'she', 'said']
 
@@ -72,23 +72,23 @@ Removing stop words
 Removing stop words can sometimes significantly boost performance of your
 classifier. CrazyTokenizer gives you a few options to remove stop words:
 
-  - Using built-in list of the english stop words (``ignorestopwords=True``)
+  - Using built-in list of the english stop words (``ignore_stopwords=True``)
 
-  >>> tokenizer = CrazyTokenizer(ignorestopwords=True)
+  >>> tokenizer = CrazyTokenizer(ignore_stopwords=True)
   >>> tokenizer.tokenize('PhD life is great: eat, work, and sleep')
   ['phd', 'life', 'great', 'eat', 'work', 'sleep']
 
   - Using NLTK lists of stop words. Just pass the name of the language
-    of your documents to the ``ignorestopwords`` parameter.
+    of your documents to the ``ignore_stopwords`` parameter.
 
-  >>> tokenizer = CrazyTokenizer(ignorestopwords='english')
+  >>> tokenizer = CrazyTokenizer(ignore_stopwords='english')
   # You might have to run nltk.download('stopwords') first
   >>> tokenizer.tokenize('PhD life is great: eat, work, and sleep')
   ['phd', 'life', 'great', 'eat', 'work', 'sleep']
 
   - Alternatively, you can supply your own custom list of the stop words. Letter case doesn't matter.
 
-  >>> tokenizer = CrazyTokenizer(ignorestopwords=['Vladimir', "Putin"])
+  >>> tokenizer = CrazyTokenizer(ignore_stopwords=['Vladimir', "Putin"])
   >>> tokenizer.tokenize("The best leader in the world is Vladimir Putin")
   ['the', 'best', 'leader', 'in', 'the', 'world', 'is']
 
@@ -106,10 +106,10 @@ Removing punctuation and linebreaks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Punctuation and linebreak characters usually just introduce extra noise
 to your text classification problem,
-so you can easily remove it with ``removepunct`` and ``removebreaks`` options.
+so you can easily remove it with ``remove_punct`` and ``remove_breaks`` options.
 Both default to True.
 
->>> tokenizer = CrazyTokenizer(removepunct=True, removebreaks=True)
+>>> tokenizer = CrazyTokenizer(remove_punct=True, remove_breaks=True)
 >>> tokenizer.tokenize("I love my life, friends, and oxford commas. \n Amen!")
 ['i', 'love', 'my', 'life', 'friends', 'and', 'oxford', 'commas', 'amen']
 
@@ -127,21 +127,21 @@ Dealing with hashtags
 Hashtags are super-popular on Twitter. CrazyTokenizer can do one of
 three things about them:
 
-  - Do nothing (``hashtags=False, splithashtags=False``)
+  - Do nothing (``hashtags=False, split_hashtags=False``)
   - Replace all of them with a placeholder token (``hashtags='TOKEN'``)
-  - Split them into separate words (``hashtags=False, splithashtags=True``)
+  - Split them into separate words (``hashtags=False, split_hashtags=True``)
 
 Splitting hashtags is especially useful for the Reddit-based models since
 hashtags are not used on Reddit, and you can potentially lose a lot of semantic
 information when you calculate RedditScores for the Twitter data.
 
->>> tokenizer = CrazyTokenizer(hashtags=False, splithashtags=False)
+>>> tokenizer = CrazyTokenizer(hashtags=False, split_hashtags=False)
 >>> text = "Let's #makeamericagreatagain#americafirst"
 >>> tokenizer.tokenize(text)
 ["let's", "#makeamericagreatagain", "#americafirst"]
->>> tokenizer = CrazyTokenizer(hashtags="HASHTAG_TOKEN", splithashtags=False)
+>>> tokenizer = CrazyTokenizer(hashtags="HASHTAG_TOKEN", split_hashtags=False)
 ["let's", "HASHTAG_TOKEN", "HASHTAG_TOKEN"]
->>> tokenizer = CrazyTokenizer(hashtags=False, splithashtags=True)
+>>> tokenizer = CrazyTokenizer(hashtags=False, split_hashtags=True)
 ["let's", "make", "america", "great", "again", "america", "first"]
 
 Dealing with special tokens

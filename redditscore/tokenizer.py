@@ -58,6 +58,7 @@ TWITTER_HANDLES_RE = re.compile(r"@\w{1,15}")
 REDDITORS_RE = re.compile(r"u/\w{1,20}")
 SUBREDDITS_RE = re.compile(r"/r/\w{1,20}")
 QUOTES_RE = re.compile(r'^".*"$')
+REDDIT_QUOTES_RE = re.compile(r'&gt;[^\n]+\n')
 BREAKS_RE = re.compile(r"[\r\n]+")
 URLS_RE = re.compile(
     r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\ ),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
@@ -211,11 +212,14 @@ class CrazyTokenizer(object):
         ("awesoooooome" -> "awesooome"). The value of parameter
         determines the number of occurences to keep. Defaults to 3.
 
-    ignorequotes: bool, optional
+    ignore_quotes: bool, optional
         If True, ignore tokens contained within double quotes.
         Defaults to False.
 
-    ignorestopwords: str, list, or boolean, optional
+    ignore_reddit_quotes: bool, optional
+        If True, remove quotes from the Reddit comments. Defaults to False.
+
+    ignore_stopwords: str, list, or boolean, optional
         Whether to ignore stopwords
 
         - str: language to get a list of stopwords for from NLTK package
@@ -232,17 +236,17 @@ class CrazyTokenizer(object):
         - 'stem': use PorterStemmer from NLTK package
         - 'lemm': use WordNetLemmatizer from NLTK package
 
-    removepunct: bool, optional
+    remove_punct: bool, optional
         If True, remove punctuation tokens. Defaults to True.
 
-    removebreaks: bool, optional
+    remove_breaks: bool, optional
         If True, remove linebreak tokens. Defaults to True.
 
     decontract: bool, optional
         If True, attempt to expand certain contractions. Defaults to False.
         Example: "'ll" -> " will"
 
-    splithashtags: bool, optional
+    split_hashtags: bool, optional
         If True, split hashtags according to word frequency.
 
         Example: "#vladimirputinisthebest" -> "vladimir putin is the best"
@@ -319,9 +323,10 @@ class CrazyTokenizer(object):
     """
 
     def __init__(self, lowercase=True, keepcaps=False, normalize=3,
-                 ignorequotes=False, ignorestopwords=False, stem=False,
-                 removepunct=True, removebreaks=True, decontract=False,
-                 splithashtags=False, twitter_handles=False,
+                 ignore_quotes=False, ignore_reddit_quotes=False,
+                 ignore_stopwords=False, stem=False,
+                 remove_punct=True, remove_breaks=True, decontract=False,
+                 split_hashtags=False, twitter_handles=False,
                  urls=False, hashtags=False, numbers=False,
                  subreddits=False, reddit_usernames=False,
                  emails=False, extra_patterns=None, keep_untokenized=None,
@@ -355,20 +360,20 @@ class CrazyTokenizer(object):
                                   [{'ORTH': 'u'}, {'ORTH': '/'},
                                    {alpha_digits_flag: True}])
 
-        if isinstance(ignorestopwords, str) and ('nltk' in sys.modules):
+        if isinstance(ignore_stopwords, str) and ('nltk' in sys.modules):
             try:
-                self._stopwords = stopwords.words(ignorestopwords)
+                self._stopwords = stopwords.words(ignore_stopwords)
             except OSError:
                 raise ValueError(
-                    'Language {} was not found by NLTK'.format(ignorestopwords))
-        elif ignorestopwords is True:
+                    'Language {} was not found by NLTK'.format(ignore_stopwords))
+        elif ignore_stopwords is True:
             self._matcher.add('STOPWORDS', self._remove_token,
                               [{'IS_STOP': True}])
-        elif isinstance(ignorestopwords, list):
-            self._stopwords = [word.lower() for word in ignorestopwords]
-        elif ignorestopwords is not False:
-            raise TypeError('Type {} is not supported by ignorestopwords parameter or NLTK is not installed'.format(
-                type(ignorestopwords)))
+        elif isinstance(ignore_stopwords, list):
+            self._stopwords = [word.lower() for word in ignore_stopwords]
+        elif ignore_stopwords is not False:
+            raise TypeError('Type {} is not supported by ignore_stopwords parameter or NLTK is not installed'.format(
+                type(ignore_stopwords)))
 
         if lowercase and (not keepcaps):
             self._matcher.add('LOWERCASE', self._lowercase,
@@ -377,11 +382,11 @@ class CrazyTokenizer(object):
             self._matcher.add('LOWERCASE', self._lowercase, [
                 {'IS_LOWER': False, 'IS_UPPER': False}])
 
-        if removepunct:
+        if remove_punct:
             self._matcher.add('PUNCTUATION', self._remove_token, [
                 {'IS_PUNCT': True}])
 
-        if removebreaks:
+        if remove_breaks:
             def break_check(text):
                 return bool(BREAKS_RE.fullmatch(text))
             break_flag = self._nlp.vocab.add_flag(break_check)
@@ -448,10 +453,10 @@ class CrazyTokenizer(object):
                               [{subreddit_flag: True}])
             self._replacements['SUBREDDIT'] = subreddits
 
-        if (hashtags is not False) or splithashtags:
+        if (hashtags is not False) or split_hashtags:
             self._matcher.add('HASHTAG', self._hashtag_postprocess, [
                 {hashtag_flag: True}])
-            if splithashtags:
+            if split_hashtags:
                 file = os.path.join(DATA_PATH, 'wordsfreq.txt')
                 with open(file) as f:
                     self._words = f.read().split()
@@ -459,7 +464,7 @@ class CrazyTokenizer(object):
                                       for i, k in enumerate(self._words))
                 self._maxword = max(len(x) for x in self._words)
 
-        if ignorequotes:
+        if ignore_quotes:
             self._merging_matcher.add('QUOTE', None, [{'ORTH': '"'}, {
                 'OP': '*', 'IS_ASCII': True}, {'ORTH': '"'}])
 
@@ -674,7 +679,7 @@ class CrazyTokenizer(object):
         for tok in span:
             if self.params['hashtags']:
                 tok._.transformed_text = self.params['hashtags']
-            elif self.params['splithashtags']:
+            elif self.params['split_hashtags']:
                 poss = self._infer_spaces(tok._.transformed_text[1:])
                 if poss:
                     tok._.transformed_text = poss
@@ -715,6 +720,9 @@ class CrazyTokenizer(object):
             if LATIN_CHARS_RE.findall(text):
                 for _hex, _char in LATIN_CHARS.items():
                     text = LATIN_CHARS_PATS[_hex].sub(_char, text)
+
+        if self.params['ignore_reddit_quotes']:
+            text = REDDIT_QUOTES_RE.sub(text, ' ')
 
         text = text.replace('.@', '. @')
         text = re.sub(r'([*;,!?\(\)\[\]])', r' \1', text)

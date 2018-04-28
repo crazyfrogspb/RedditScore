@@ -83,17 +83,17 @@ def test_normalize():
 
 
 def test_ignorequotes():
-    tokenizer = CrazyTokenizer(ignorequotes=True, removepunct=True)
+    tokenizer = CrazyTokenizer(ignore_quotes=True, remove_punct=True)
     tokens = tokenizer.tokenize(quotes_text)
     assert tokens == ['said', 'no', 'one', 'ever']
 
 
 def test_stop():
-    tokenizer = CrazyTokenizer(ignorestopwords=[
+    tokenizer = CrazyTokenizer(ignore_stopwords=[
                                'vladimir', 'putin', 'and'], lowercase=False)
     tokens = tokenizer.tokenize(vova_text)
     assert tokens == ['is', 'the', 'BEST', 'AMAZING']
-    tokenizer = CrazyTokenizer(ignorestopwords=True)
+    tokenizer = CrazyTokenizer(ignore_stopwords=True)
     tokens = tokenizer.tokenize(english_stop)
     assert tokens == []
 
@@ -105,7 +105,7 @@ def test_stem():
 
 
 def test_removepunct():
-    tokenizer = CrazyTokenizer(removepunct=True)
+    tokenizer = CrazyTokenizer(remove_punct=True)
     tokens = tokenizer.tokenize(punct_text)
     print(tokens)
     assert tokens == ['this', 'is', 'the', 'text', 'which', 'contains', 'a',
@@ -114,7 +114,7 @@ def test_removepunct():
 
 
 def test_removebreaks():
-    tokenizer = CrazyTokenizer(removebreaks=True)
+    tokenizer = CrazyTokenizer(remove_breaks=True)
     tokens = tokenizer.tokenize(break_text)
     assert tokens == ['i', 'love', 'linebreaks']
 
@@ -133,7 +133,7 @@ def test_decontract():
 
 
 def test_splithashtags():
-    tokenizer = CrazyTokenizer(splithashtags=True, hashtags=False)
+    tokenizer = CrazyTokenizer(split_hashtags=True, hashtags=False)
     tokens = tokenizer.tokenize(hashtag_text)
     assert tokens == ['make', 'america', 'great', 'again',
                       'make', 'russia', 'drunk', 'again', 'maga']
@@ -160,9 +160,9 @@ def test_extra_patterns():
 
 
 def test_tokenizing():
-    tokenizer = CrazyTokenizer(lowercase=True, keepcaps=True, normalize=3, ignorequotes=True, ignorestopwords=['is', 'are', 'am', 'not', 'a', 'the'],
-                               stem=False, removepunct=True, removebreaks=True, remove_nonunicode=False, decontract=False,
-                               splithashtags=True, twitter_handles='TOKENTWITTERHANDLE', urls='', hashtags=False,
+    tokenizer = CrazyTokenizer(lowercase=True, keepcaps=True, normalize=3, ignore_quotes=True, ignore_stopwords=['is', 'are', 'am', 'not', 'a', 'the'],
+                               stem=False, remove_punct=True, remove_breaks=True, remove_nonunicode=False, decontract=False,
+                               split_hashtags=True, twitter_handles='TOKENTWITTERHANDLE', urls='', hashtags=False,
                                numbers=False, subreddits='TOKENSUBREDDIT', reddit_usernames='TOKENREDDITOR',
                                emails='TOKENEMAIL', extra_patterns=None, pos_emojis=True, neg_emojis=None, neutral_emojis=None)
 
@@ -218,7 +218,7 @@ def test_annoying_case():
                       'crazy@mail.ru', '#maga',
                       '#russiago', 'http://fscorelab.ru/overview#scoring']
     tokenizer = CrazyTokenizer(emails='EMAIL', twitter_handles='HANDLE',
-                               urls='domain', splithashtags=True)
+                               urls='domain', split_hashtags=True)
     tokens = tokenizer.tokenize(annoying_case)
     assert tokens == ['b', 'HANDLE', 'HANDLE', 'EMAIL', 'maga', 'russia', 'go',
                       'fscorelab']
@@ -232,7 +232,7 @@ def test_hex():
 
 
 def test_realname():
-    tokenizer = CrazyTokenizer(splithashtags=True, twitter_handles='realname')
+    tokenizer = CrazyTokenizer(split_hashtags=True, twitter_handles='realname')
     tokens = tokenizer.tokenize(realname_text)
     assert tokens == ['donald', 'j.', 'trump', 'please', 'make', 'america',
                       'great', 'again']

@@ -27,7 +27,7 @@ Usage example:
 
     df = pd.read_csv(os.path.join('redditscore', 'reddit_small_sample.csv'))
     df = df.sample(frac=1.0, random_state=24) # shuffling data
-    tokenizer = CrazyTokenizer(splithashtags=True) # initializing tokenizer object
+    tokenizer = CrazyTokenizer(split_hashtags=True) # initializing tokenizer object
     X = df['body'].apply(tokenizer.tokenize) # tokenizing Reddit comments
     y = df['subreddit']
 
