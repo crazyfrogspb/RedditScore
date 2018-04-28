@@ -177,7 +177,12 @@ def get_url_title(url, verbose=False):
 
 
 def get_twitter_realname(twitter_handle):
-    response = requests.get('https://twitter.com/' + twitter_handle)
+    try:
+        response = requests.get('https://twitter.com/' + twitter_handle)
+    except requests.exceptions.ConnectionError:
+        warnings.warn(
+            "Couldn't extract real name for {}".format(twitter_handle))
+        return ''
     soup = BeautifulSoup(response.text, "lxml")
     if soup.title is not None:
         realname = soup.title.text.split('(')[0]
@@ -362,7 +367,7 @@ class CrazyTokenizer(object):
         elif isinstance(ignorestopwords, list):
             self._stopwords = [word.lower() for word in ignorestopwords]
         elif ignorestopwords is not False:
-            raise TypeError('Type {} is not supported by ignorestopwords parameter'.format(
+            raise TypeError('Type {} is not supported by ignorestopwords parameter or NLTK is not installed'.format(
                 type(ignorestopwords)))
 
         if lowercase and (not keepcaps):
@@ -423,7 +428,6 @@ class CrazyTokenizer(object):
             else:
                 with open(os.path.join(DATA_PATH, 'realnames.json')) as f:
                     self._realnames = json.load(f)
-                    print('huy')
                 self._matcher.add('TWITTER_HANDLE', self._get_realname, [
                     {twitter_handle_flag: True}])
 
