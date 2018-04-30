@@ -126,6 +126,8 @@ class RedditModel(metaclass=ABCMeta):
         self.fitted = False
         self.class_embeddings = None
 
+        np.random.seed(random_state)
+
     def cv_score(self, X, y, cv=0.2, scoring='accuracy'):
         """Calculate validation score
 

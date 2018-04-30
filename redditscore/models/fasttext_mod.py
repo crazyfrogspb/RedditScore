@@ -142,26 +142,20 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         # Return predictions
-        predictions = []
-        for doc in X:
-            predictions.append(self._model.predict(' '.join(doc), k=1)[0][0])
-        predictions = np.array([pred[len(self.label):]
-                                for pred in predictions])
-        return predictions
+        docs = [' '.join(doc) for doc in X]
+        predictions = self._model.predict(docs, k=1)[0]
+        return np.array([pred[0][len(self.label):]
+                         for pred in predictions])
 
     def predict_proba(self, X):
         # Return predicted probabilities
-        predictions = []
-        for doc in X:
-            pred = self._model.predict(' '.join(doc), k=self._num_classes)
-            predictions.append(list(zip(*pred)))
+        docs = [' '.join(doc) for doc in X]
+        predictions = zip(*self._model.predict(docs, k=self._num_classes))
         probabilities = []
         for pred in predictions:
-            d = {key[len(self.label):]: value for key, value in pred}
+            d = {key[len(self.label):]: value for key, value in zip(*pred)}
             probabilities.append(d)
-        probabilities = pd.DataFrame(probabilities).fillna(1e-10)
-
-        return probabilities
+        return pd.DataFrame(probabilities).fillna(1e-10)
 
 
 class FastTextModel(redditmodel.RedditModel):
@@ -182,7 +176,6 @@ class FastTextModel(redditmodel.RedditModel):
         self.model_type = 'fasttext'
         self._score_scaler = None
         self._model = FastTextClassifier(**kwargs)
-        self._transformer = QuantileTransformer(random_state=random_state)
 
     def set_params(self, **params):
         """Set parameters of the model
@@ -212,6 +205,7 @@ class FastTextModel(redditmodel.RedditModel):
         """
         y = np.array(y)
         X = np.array(X)
+
         self._classes = np.array(sorted(np.unique(y)))
         self._model.fit(X, y)
         fd, path = tempfile.mkstemp()
@@ -224,14 +218,7 @@ class FastTextModel(redditmodel.RedditModel):
         self.class_embeddings = emb.loc[self._classes]
         os.remove(path)
         self.fitted = True
-        probabilities = self.predict_proba(X)
-        self._transformer.fit(probabilities)
         return self
-
-    def calculate_scores(self, X):
-        probabilities = self.predict_proba(X)
-        return pd.DataFrame(self._transformer.transform(probabilities),
-                            columns=self._classes)
 
     def save_model(self, filepath):
         """Save model to disk.
