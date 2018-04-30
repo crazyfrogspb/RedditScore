@@ -127,21 +127,21 @@ Dealing with hashtags
 Hashtags are super-popular on Twitter. CrazyTokenizer can do one of
 three things about them:
 
-  - Do nothing (``hashtags=False, split_hashtags=False``)
+  - Do nothing (``hashtags=False``)
   - Replace all of them with a placeholder token (``hashtags='TOKEN'``)
-  - Split them into separate words (``hashtags=False, split_hashtags=True``)
+  - Split them into separate words (``hashtags='splits'``)
 
 Splitting hashtags is especially useful for the Reddit-based models since
 hashtags are not used on Reddit, and you can potentially lose a lot of semantic
 information when you calculate RedditScores for the Twitter data.
 
->>> tokenizer = CrazyTokenizer(hashtags=False, split_hashtags=False)
+>>> tokenizer = CrazyTokenizer(hashtags=False)
 >>> text = "Let's #makeamericagreatagain#americafirst"
 >>> tokenizer.tokenize(text)
 ["let's", "#makeamericagreatagain", "#americafirst"]
->>> tokenizer = CrazyTokenizer(hashtags="HASHTAG_TOKEN", split_hashtags=False)
+>>> tokenizer = CrazyTokenizer(hashtags="HASHTAG_TOKEN")
 ["let's", "HASHTAG_TOKEN", "HASHTAG_TOKEN"]
->>> tokenizer = CrazyTokenizer(hashtags=False, split_hashtags=True)
+>>> tokenizer = CrazyTokenizer(hashtags='split')
 ["let's", "make", "america", "great", "again", "america", "first"]
 
 Dealing with special tokens
@@ -163,12 +163,19 @@ Well, it's your lucky day, CrazyTokenizer can do that!
 >>> tokenizer.tokenize(text)
 ['ANOTHER_TWITTER_USER', 'recommends']
 
-There is a special option for Twitter handles: 'realname'. It replaces each
-handle with the screen name of the user that is listed in their profile.
+There are two special options for Twitter handles: 'realname' and 'split'.
+'realname' replaces each handle with the screen name of the user that is listed
+in their profile.
 
->>> tokenizer = CrazyTokenizer(splithashtags=True, twitter_handles='realname')
+>>> tokenizer = CrazyTokenizer(hashtags='split', twitter_handles='realname')
 >>> tokenizer.tokenize('@realDonaldTrump please #MakeAmericaGreatAgain')
 ['donald', 'j.', 'trump', 'please', 'make', 'america', 'great', 'again']
+
+'split' splits handles into separate words using Viterbi algorithm.
+
+>>> tokenizer = CrazyTokenizer(twitter_handles='split')
+>>> tokenizer.tokenize('@realDonaldTrump loves @FoxNews')
+['real', 'donald', 'trump', 'loves', 'fox', 'news']
 
 URLs
 ^^^^

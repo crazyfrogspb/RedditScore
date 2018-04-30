@@ -42,6 +42,7 @@ untokenized_text = "Rats are actually more polite in New York City than in Los A
 annoying_case = 'b@realDonaldTrump@crazyfrogspb crazy@mail.ru #maga#russiago http://fscorelab.ru/overview#scoring'
 hex_text = "I\\xe2\\x80\\x99m so annoyed by these characters \\xF0\\x9F\\x98\\xA2"
 realname_text = "@realDonaldTrump please #makeamericagreatagain"
+splithandle_text = '@realDonaldTrump loves @BreitbartNews'
 
 
 def test_emoji():
@@ -133,7 +134,7 @@ def test_decontract():
 
 
 def test_splithashtags():
-    tokenizer = CrazyTokenizer(split_hashtags=True, hashtags=False)
+    tokenizer = CrazyTokenizer(hashtags='split')
     tokens = tokenizer.tokenize(hashtag_text)
     assert tokens == ['make', 'america', 'great', 'again',
                       'make', 'russia', 'drunk', 'again', 'maga']
@@ -162,7 +163,7 @@ def test_extra_patterns():
 def test_tokenizing():
     tokenizer = CrazyTokenizer(lowercase=True, keepcaps=True, normalize=3, ignore_quotes=True, ignore_stopwords=['is', 'are', 'am', 'not', 'a', 'the'],
                                stem=False, remove_punct=True, remove_breaks=True, remove_nonunicode=False, decontract=False,
-                               split_hashtags=True, twitter_handles='TOKENTWITTERHANDLE', urls='', hashtags=False,
+                               twitter_handles='TOKENTWITTERHANDLE', urls='', hashtags='split',
                                numbers=False, subreddits='TOKENSUBREDDIT', reddit_usernames='TOKENREDDITOR',
                                emails='TOKENEMAIL', extra_patterns=None, pos_emojis=True, neg_emojis=None, neutral_emojis=None)
 
@@ -218,7 +219,7 @@ def test_annoying_case():
                       'crazy@mail.ru', '#maga',
                       '#russiago', 'http://fscorelab.ru/overview#scoring']
     tokenizer = CrazyTokenizer(emails='EMAIL', twitter_handles='HANDLE',
-                               urls='domain', split_hashtags=True)
+                               urls='domain', hashtags='split')
     tokens = tokenizer.tokenize(annoying_case)
     assert tokens == ['b', 'HANDLE', 'HANDLE', 'EMAIL', 'maga', 'russia', 'go',
                       'fscorelab']
@@ -232,7 +233,13 @@ def test_hex():
 
 
 def test_realname():
-    tokenizer = CrazyTokenizer(split_hashtags=True, twitter_handles='realname')
+    tokenizer = CrazyTokenizer(hashtags='split', twitter_handles='realname')
     tokens = tokenizer.tokenize(realname_text)
     assert tokens == ['donald', 'j.', 'trump', 'please', 'make', 'america',
                       'great', 'again']
+
+
+def test_handles_split():
+    tokenizer = CrazyTokenizer(twitter_handles='split')
+    tokens = tokenizer.tokenize(splithandle_text)
+    assert tokens == ['real', 'donald', 'trump', 'loves', 'breitbart', 'news']

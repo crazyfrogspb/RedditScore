@@ -246,16 +246,7 @@ class CrazyTokenizer(object):
         If True, attempt to expand certain contractions. Defaults to False.
         Example: "'ll" -> " will"
 
-    split_hashtags: bool, optional
-        If True, split hashtags according to word frequency.
-
-        Example: "#vladimirputinisthebest" -> "vladimir putin is the best"
-
-        Defaults to False.
-
-        Note: it will not do anything if "hashtags" argument is not False
-
-    hashtags, numbers, subreddits, reddit_usernames, emails:
+    numbers, subreddits, reddit_usernames, emails:
     False or str, optional
         Replacement of the different types of tokens
 
@@ -264,11 +255,21 @@ class CrazyTokenizer(object):
         - '': removes all occurrences of these tokens
 
     twitter_handles: False, 'realname' or str, optional
-        Replacement of twitter handles
+        Processing of twitter handles
 
         - False: do nothing
         - str: replacement token
         - 'realname': replace with the real screen name of Twitter account
+        - 'split': split handles using Viterbi algorithm
+
+        Example: "#vladimirputinisthebest" -> "vladimir putin is the best"
+
+    hashtags: False or str, optional
+        Processing of hashtags
+
+        - False: do nothing
+        - str: replacement token
+        - 'split': split hashtags according using Viterbi algorithm
 
     urls: False or str, optional
         Replacement of parsed URLs
@@ -326,9 +327,8 @@ class CrazyTokenizer(object):
                  ignore_quotes=False, ignore_reddit_quotes=False,
                  ignore_stopwords=False, stem=False,
                  remove_punct=True, remove_breaks=True, decontract=False,
-                 split_hashtags=False, twitter_handles=False,
-                 urls=False, hashtags=False, numbers=False,
-                 subreddits=False, reddit_usernames=False,
+                 twitter_handles=False, urls=False, hashtags=False,
+                 numbers=False, subreddits=False, reddit_usernames=False,
                  emails=False, extra_patterns=None, keep_untokenized=None,
                  whitespaces_to_underscores=True, remove_nonunicode=False,
                  pos_emojis=None, neg_emojis=None, neutral_emojis=None,
@@ -425,17 +425,6 @@ class CrazyTokenizer(object):
                               [{'LIKE_EMAIL': True}])
             self._replacements['EMAIL'] = emails
 
-        if twitter_handles is not False:
-            if twitter_handles != 'realname':
-                self._matcher.add('TWITTER_HANDLE', self._replace_token, [
-                    {twitter_handle_flag: True}])
-                self._replacements['TWITTER_HANDLE'] = twitter_handles
-            else:
-                with open(os.path.join(DATA_PATH, 'realnames.json')) as f:
-                    self._realnames = json.load(f)
-                self._matcher.add('TWITTER_HANDLE', self._get_realname, [
-                    {twitter_handle_flag: True}])
-
         if reddit_usernames is not False:
             def reddit_username_check(text):
                 return bool(REDDITORS_RE.fullmatch(text))
@@ -453,16 +442,25 @@ class CrazyTokenizer(object):
                               [{subreddit_flag: True}])
             self._replacements['SUBREDDIT'] = subreddits
 
-        if (hashtags is not False) or split_hashtags:
+        if twitter_handles:
+            self._matcher.add('TWITTER_HANDLE', self._handles_postprocess,
+                              [{twitter_handle_flag: True}])
+
+        if hashtags:
             self._matcher.add('HASHTAG', self._hashtag_postprocess, [
                 {hashtag_flag: True}])
-            if split_hashtags:
-                file = os.path.join(DATA_PATH, 'wordsfreq.txt')
-                with open(file) as f:
-                    self._words = f.read().split()
-                self._wordcost = dict((k, log((i + 1) * log(len(self._words))))
-                                      for i, k in enumerate(self._words))
-                self._maxword = max(len(x) for x in self._words)
+
+        if hashtags == 'split' or twitter_handles == 'split':
+            file = os.path.join(DATA_PATH, 'wordsfreq_wiki2.txt')
+            with open(file) as f:
+                self._words = f.read().split()
+            self._wordcost = dict((k, log((i + 1) * log(len(self._words))))
+                                  for i, k in enumerate(self._words))
+            self._maxword = max(len(x) for x in self._words)
+
+        if twitter_handles == 'realname':
+            with open(os.path.join(DATA_PATH, 'realnames.json')) as f:
+                self._realnames = json.load(f)
 
         if ignore_quotes:
             self._merging_matcher.add('QUOTE', None, [{'ORTH': '"'}, {
@@ -606,19 +604,6 @@ class CrazyTokenizer(object):
                     tok._.transformed_text = title
                     self._domains[found_urls[0]] = title
 
-    def _get_realname(self, __, doc, i, matches):
-        # get real name from the twitter handle
-        __, start, end = matches[i]
-        span = doc[start:end]
-        for tok in span:
-            if tok.text in self._realnames:
-                tok._.transformed_text = self._realnames[tok.text]
-            else:
-                handle = get_twitter_realname(tok.text)
-                realname = self.tokenize(TWITTER_HANDLES_RE.sub('', handle))
-                tok._.transformed_text = realname
-                self._realnames[tok.text] = realname
-
     def _replace_token(self, __, doc, i, matches):
         # Replace tokens with something else
         match_id, start, end = matches[i]
@@ -672,19 +657,37 @@ class CrazyTokenizer(object):
 
         return list(reversed(out))
 
+    def _handles_postprocess(self, __, doc, i, matches):
+        # Process twitter handles
+        __, start, end = matches[i]
+        span = doc[start:end]
+        for tok in span:
+            if self.params['twitter_handles'] == 'realname':
+                if tok.text in self._realnames:
+                    tok._.transformed_text = self._realnames[tok.text]
+                else:
+                    handle = get_twitter_realname(tok.text)
+                    realname = self.tokenize(TWITTER_HANDLES_RE.sub('', handle))
+                    tok._.transformed_text = realname
+                    self._realnames[tok.text] = realname
+            elif self.params['twitter_handles'] == 'split':
+                poss = self._infer_spaces(tok._.transformed_text[1:])
+                if poss:
+                    tok._.transformed_text = poss
+            else:
+                tok._.transformed_text = self.params['twitter_handles']
+
     def _hashtag_postprocess(self, __, doc, i, matches):
         # Process hashtags
         __, start, end = matches[i]
         span = doc[start:end]
         for tok in span:
-            if self.params['hashtags']:
-                tok._.transformed_text = self.params['hashtags']
-            elif self.params['split_hashtags']:
+            if self.params['hashtags'] == 'split':
                 poss = self._infer_spaces(tok._.transformed_text[1:])
                 if poss:
                     tok._.transformed_text = poss
             else:
-                tok._.transformed_text = tok.text
+                tok._.transformed_text = self.params['hashtags']
 
     @staticmethod
     def _decontract(text):
