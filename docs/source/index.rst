@@ -10,6 +10,7 @@ Contents:
    :maxdepth: 6
 
    RedditScore Overview <overview>
+   Installation <installation>
    Data Collection <data_collection>
    Tokenizing <tokenizing>
    Modelling <modelling>
