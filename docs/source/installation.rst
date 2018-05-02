@@ -9,7 +9,7 @@ If you want to use all features of the RedditScore library, make sure to install
 
     - For training fastText models:
         >>> pip install Cythin pybind11
-        >>> git clone git+https://github.com/crazyfrogspb/fastText.git
+        >>> git clone https://github.com/crazyfrogspb/fastText.git
         >>> cd fastText
         >>> pip install .
     - For training neural networks:

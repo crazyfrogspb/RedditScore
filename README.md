@@ -19,7 +19,7 @@ dependencies:
 
 	pip install Cython pybind11 selenium keras tensorflow tensorflow-gpu nltk pandas-gbq
 	pip install git+https://github.com/crazyfrogspb/tweepy.git
-	git clone git+https://github.com/crazyfrogspb/fastText.git
+	git clone https://github.com/crazyfrogspb/fastText.git
 	cd fastText
 	pip install .
 
