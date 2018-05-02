@@ -255,15 +255,15 @@ def grab_tweets(twitter_creds, screen_name=None, user_id=None, timeout=0.1,
         retweet = False
         if getattr(tweet, 'retweeted_status', None) is not None:
             retweet = True
-        tweet_fields = [text, tweet.id_str, tweet.created_at, retweet]
+        tweet_fields = [text, tweet.id, tweet.created_at, retweet]
         for field in fields:
             tweet_fields.append(getattr(tweet, field, None))
         full_tweets.append(tweet_fields)
     full_tweets = pd.DataFrame(
-        full_tweets, columns=(['text', 'id_str', 'created_at', 'retweet'] +
+        full_tweets, columns=(['text', 'id', 'created_at', 'retweet'] +
                               fields))
     full_tweets['screen_name'] = screen_name
     if user_id:
         full_tweets['user_id'] = user_id
-    full_tweets.drop_duplicates('id_str', inplace=True)
+    full_tweets.drop_duplicates('id', inplace=True)
     return full_tweets
