@@ -19,14 +19,14 @@ def add_months(sourcedate, months):
     return datetime.date(year, month, day)
 
 
-def construct_query(subreddits, month, score_limit):
+def construct_query(subreddits, month, score_limit=None):
     # Construct a query string
     subreddits = '", "'.join(subreddits)
     subreddits = '"' + subreddits + '"'
-    if score_limit:
-        score = " AND score >= {}".format(score_limit)
-    else:
+    if score_limit is None:
         score = ""
+    else:
+        score = " AND score >= {}".format(int(score_limit))
     query = """
     SELECT
         id,
@@ -52,14 +52,14 @@ def construct_query(subreddits, month, score_limit):
     return query
 
 
-def construct_sample_score_query(subreddits, month, sample_size, score_limit):
+def construct_sample_score_query(subreddits, month, sample_size, score_limit=None):
     # Construct a query with sampling top-scoring comments
     subreddits = '", "'.join(subreddits)
     subreddits = '"' + subreddits + '"'
-    if score_limit:
-        score = " AND score >= {}".format(score_limit)
-    else:
+    if score_limit is None:
         score = ""
+    else:
+        score = " AND score >= {}".format(int(score_limit))
     query = """
     SELECT
         id,
@@ -98,14 +98,14 @@ def construct_sample_score_query(subreddits, month, sample_size, score_limit):
     return query
 
 
-def construct_sample_query(subreddits, month, sample_size, score_limit):
+def construct_sample_query(subreddits, month, sample_size, score_limit=None):
     # Constuct a query string with random sampling
     subreddits = '", "'.join(subreddits)
     subreddits = '"' + subreddits + '"'
-    if score_limit:
-        score = " AND score >= {}".format(score_limit)
-    else:
+    if score_limit is None:
         score = ""
+    else:
+        score = " AND score >= {}".format(int(score_limit))
     query = """
     SELECT
         id,
