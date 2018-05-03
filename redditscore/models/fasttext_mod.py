@@ -63,9 +63,22 @@ def _data_to_temp(X, label, y=None):
     with os.fdopen(fd, 'w') as tmp:
         for i in range(X.shape[0]):
             if y is not None:
-                doc = label + y[i] + ' ' + ' '.join(X[i])
+                doc = label + y[i] + ' '
+                if isinstance(X[i], list):
+                    doc += ' '.join(X[i])
+                elif isinstance(X[i], str):
+                    doc += X[i]
+                else:
+                    raise ValueError(
+                        'X has to be a sequence of tokens or strings')
             else:
-                doc = ' '.join(X[i])
+                if isinstance(X[i], list):
+                    doc = ' '.join(X[i])
+                elif isinstance(X[i], str):
+                    doc = X[i]
+                else:
+                    raise ValueError(
+                        'X has to be a sequence of tokens or strings')
             tmp.write("%s\n" % doc)
     return path
 
@@ -112,11 +125,6 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y):
         # Fit model
-        if not isinstance(X, np.ndarray):
-            X = np.array(X)
-        if not isinstance(y, np.ndarray):
-            y = np.array(y)
-
         path = _data_to_temp(X, self.label, y)
         self._num_classes = len(np.unique(y))
         self._model = fastText.train_supervised(path,
@@ -142,14 +150,24 @@ class FastTextClassifier(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         # Return predictions
-        docs = [' '.join(doc) for doc in X]
+        if isinstance(X[0], list):
+            docs = [' '.join(doc) for doc in X]
+        elif isinstance(X[0], str):
+            docs = list(X)
+        else:
+            raise ValueError("X has to contrain sequence of tokens or strings")
         predictions = self._model.predict(docs, k=1)[0]
         return np.array([pred[0][len(self.label):]
                          for pred in predictions])
 
     def predict_proba(self, X):
         # Return predicted probabilities
-        docs = [' '.join(doc) for doc in X]
+        if isinstance(X[0], list):
+            docs = [' '.join(doc) for doc in X]
+        elif isinstance(X[0], str):
+            docs = list(X)
+        else:
+            raise ValueError("X has to contrain sequence of tokens or strings")
         predictions = zip(*self._model.predict(docs, k=self._num_classes))
         probabilities = []
         for pred in predictions:
@@ -203,8 +221,10 @@ class FastTextModel(redditmodel.RedditModel):
         FastTextModel
             Fitted model object
         """
-        y = np.array(y)
-        X = np.array(X)
+        if not isinstance(X, np.ndarray):
+            X = np.array(X)
+        if not isinstance(y, np.ndarray):
+            y = np.array(y)
 
         self._classes = np.array(sorted(np.unique(y)))
         self._model.fit(X, y)

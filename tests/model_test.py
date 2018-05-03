@@ -14,6 +14,7 @@ tokenizer = CrazyTokenizer(urls='domain')
 df['tokens'] = df['body'].apply(tokenizer.tokenize)
 
 pytest.X = df['tokens']
+pytest.X_str = df['tokens'].str.join(' ')
 pytest.y = df['subreddit']
 
 pytest.MM = sklearn_mod.SklearnModel(model_type='multinomial', alpha=0.1,
@@ -21,6 +22,8 @@ pytest.MM = sklearn_mod.SklearnModel(model_type='multinomial', alpha=0.1,
 pytest.MM.fit(pytest.X, pytest.y)
 pytest.FM = fasttext_mod.FastTextModel(minCount=5)
 pytest.FM.fit(pytest.X, pytest.y)
+pytest.FM_str = fasttext_mod.FastTextModel(minCount=5)
+pytest.FM_str.fit(pytest.X_str, pytest.y)
 pytest.BM = sklearn_mod.SklearnModel(model_type='bernoulli', alpha=0.1,
                                      random_state=24, tfidf=False, ngrams=1)
 pytest.BM.fit(pytest.X, pytest.y)
@@ -55,6 +58,11 @@ def test_fasttext_train():
     pytest.FM.tune_params(pytest.X, pytest.y, cv=0.2, param_grid={
         'step0': {'epoch': [1, 2]},
         'step1': {'minCount': [1, 5]}})
+
+
+def test_fasttext_str():
+    pytest.FM.predict(pytest.X_str)
+    pytest.FM.predict_proba(pytest.X_str)
 
 
 def test_step_exception():

@@ -156,11 +156,18 @@ class RedditModel(metaclass=ABCMeta):
         float
             Average value of the validation metrics
         """
+        if not isinstance(X, np.ndarray):
+            X = np.array(X)
+        if not isinstance(y, np.ndarray):
+            y = np.array(y)
+
         self._classes = sorted(np.unique(y))
         np.random.seed(self.random_state)
         if isinstance(cv, float):
-            train_ind, __ = train_test_split(np.arange(0, X.shape[0]))
-            test_fold = np.zeros((X.shape[0], ))
+            train_ind, __ = train_test_split(np.arange(0, len(X)),
+                                             test_size=cv, shuffle=True,
+                                             random_state=self.random_state)
+            test_fold = np.zeros((len(X), ))
             test_fold[train_ind] = -1
             cv_split = PredefinedSplit(test_fold)
         else:
@@ -215,6 +222,7 @@ class RedditModel(metaclass=ABCMeta):
             Best value of the chosen metric
         """
         self._classes = sorted(np.unique(y))
+
         if param_grid is None:
             file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 os.path.join('..', 'data', 'model_pars.json'))
@@ -284,8 +292,10 @@ class RedditModel(metaclass=ABCMeta):
             Fitted model object
         """
         self._classes = np.array(sorted(np.unique(y)))
-        X = np.array(X)
-        y = np.array(y)
+        if not isinstance(X, np.ndarray):
+            X = np.array(X)
+        if not isinstance(y, np.ndarray):
+            y = np.array(y)
         self._model.fit(X, y)
         self.fitted = True
         return self
@@ -308,7 +318,8 @@ class RedditModel(metaclass=ABCMeta):
         """
         if not self.fitted:
             raise NotFittedError('Model has to be fitted first')
-        X = np.array(X)
+        if not isinstance(X, np.ndarray):
+            X = np.array(X)
         return self._model.predict(X)
 
     def predict_proba(self, X):
@@ -329,7 +340,8 @@ class RedditModel(metaclass=ABCMeta):
         """
         if not self.fitted:
             raise NotFittedError('Model has to be fitted first')
-        X = np.array(X)
+        if not isinstance(X, np.ndarray):
+            X = np.array(X)
         return self._model.predict_proba(X)
 
     def get_params(self, deep=None):
