@@ -203,15 +203,22 @@ def grab_tweets(twitter_creds, screen_name=None, user_id=None, timeout=0.1,
         try:
             u = api.get_user(int(user_id))
             screen_name = u.screen_name
+            reg_date = u.created_at.date()
+            sleep(timeout)
         except tweepy.TweepError as e:
             return _handle_tweepy_error(e, user_id)
         except ValueError as e:
             raise ValueError('{} is not a valid user_id'.format(user_id)) from e
+    else:
+        u = api.get_user(screen_name)
+        reg_date = u.created_at.date()
+        sleep(timeout)
 
     if fields is None:
         fields = []
-    if start_date is None:
-        start_date = datetime.date(year=2016, month=1, day=1)
+
+    if start_date is None or start_date < reg_date:
+        start_date = reg_date
 
     alltweets = []
 
@@ -238,9 +245,10 @@ def grab_tweets(twitter_creds, screen_name=None, user_id=None, timeout=0.1,
         sleep(timeout)
 
     if get_more and len(new_tweets) == 0 and len(alltweets) > 3200:
-        print('Now grabbing tweets beyond 3200 limit')
         end_date = alltweets[-1].created_at.date()
+        print('Date of the last collected tweet: {}'.format(end_date))
         if end_date > start_date:
+            print('Now grabbing tweets beyond 3200 limit')
             dates = (start_date, end_date)
             ids = _grab_even_more_tweets(screen_name, dates, browser)
             tweets = _grab_tweet_by_ids(ids, api)

@@ -76,4 +76,4 @@ There are a few optional arguments that ``grab_tweets`` function takes:
    - ``fields``: additional fields to pull from tweets (e.g., favorite_count)
    - ``get_more``: if True, use Selenium library to pull tweets beyond infamous 3200 limit. Please note that it is quite slow and you need to have selenium package, browser (Chrome, Firefox, or Safari), and its webdriver installed.
    - ``browser``: which browser to use ('Chrome', 'Firefox', or 'Safari')
-   - ``start_date``: date to start pulling additional tweets from (must be in datetime.date format)
+   - ``start_date``: date to start pulling additional tweets from (must be in datetime.date format). If None, pull all tweets for the user.
