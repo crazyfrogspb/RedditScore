@@ -17,18 +17,22 @@ pytest.X = df['tokens']
 pytest.X_str = df['tokens'].str.join(' ')
 pytest.y = df['subreddit']
 
-pytest.MM = sklearn_mod.SklearnModel(model_type='multinomial', alpha=0.1,
-                                     random_state=24, tfidf=False, ngrams=1)
+pytest.MM = sklearn_mod.MultinomialModel(alpha=0.1, random_state=24,
+                                         tfidf=False, ngrams=2)
 pytest.MM.fit(pytest.X, pytest.y)
 pytest.FM = fasttext_mod.FastTextModel(minCount=5)
 pytest.FM.fit(pytest.X, pytest.y)
 pytest.FM_str = fasttext_mod.FastTextModel(minCount=5)
 pytest.FM_str.fit(pytest.X_str, pytest.y)
-pytest.BM = sklearn_mod.SklearnModel(model_type='bernoulli', alpha=0.1,
-                                     random_state=24, tfidf=False, ngrams=1)
-pytest.BM.fit(pytest.X, pytest.y)
-sklearn_mod.SklearnModel(model_type='svm', C=0.1, random_state=24,
-                         tfidf=False, ngrams=1)
+
+
+def test_set_params():
+    assert pytest.MM.get_params()['ngrams'] == 2
+    pytest.MM.set_params(ngrams=1, alpha=0.5)
+    assert pytest.MM.get_params()['ngrams'] == 1
+    assert pytest.FM.get_params()['minCount'] == 5
+    pytest.FM.set_params(minCount=7, random_state=2018)
+    assert pytest.FM.get_params()['minCount'] == 7
 
 
 def test_multimodel():
@@ -39,17 +43,6 @@ def test_multimodel():
                                       'alpha': [0.1, 1.0]}, refit=True)
     pytest.MM.predict(pytest.X)
     pytest.MM.predict_proba(pytest.X)
-
-
-def test_bernoulli():
-    pytest.BM.tune_params(pytest.X, pytest.y, cv=0.2, scoring='neg_log_loss',
-                          param_grid={'tfidf': [False, True]})
-    pytest.BM.tune_params(pytest.X[0:10], pytest.y[0:10], cv=0.2)
-    pytest.BM.tune_params(pytest.X, pytest.y, cv=5, scoring='accuracy',
-                          param_grid={'tfidf': [False, True],
-                                      'alpha': [0.1, 1.0]}, refit=True)
-    pytest.BM.predict(pytest.X)
-    pytest.BM.predict_proba(pytest.X)
 
 
 def test_fasttext_train():

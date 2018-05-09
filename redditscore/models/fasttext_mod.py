@@ -19,7 +19,6 @@ import fastText
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.preprocessing import QuantileTransformer
 
 from . import redditmodel
 
@@ -52,7 +51,7 @@ def load_model(filepath):
     """
     with open(os.path.splitext(filepath)[0] + '.pkl', 'rb') as f:
         model = pickle.load(f)
-    model._model._model = fastText.load_model(
+    model.model._model = fastText.load_model(
         os.path.splitext(filepath)[0] + '.bin')
     return model
 
@@ -191,19 +190,7 @@ class FastTextModel(redditmodel.RedditModel):
 
     def __init__(self, random_state=24, **kwargs):
         super().__init__(random_state=random_state)
-        self.model_type = 'fasttext'
-        self._score_scaler = None
-        self._model = FastTextClassifier(**kwargs)
-
-    def set_params(self, **params):
-        """Set parameters of the model
-
-        Parameters
-        ----------
-        **params
-            Model parameters to update
-        """
-        self._model.set_params(**params)
+        self.model = FastTextClassifier(**kwargs)
 
     def fit(self, X, y):
         """Fit model
@@ -227,13 +214,13 @@ class FastTextModel(redditmodel.RedditModel):
             y = np.array(y)
 
         self._classes = np.array(sorted(np.unique(y)))
-        self._model.fit(X, y)
+        self.model.fit(X, y)
         fd, path = tempfile.mkstemp()
-        self._model._model.save_softmax(path)
+        self.model._model.save_softmax(path)
         emb = pd.read_csv(
             path, skiprows=[0], delimiter=' ', header=None).dropna(axis=1)
         emb = emb.round(decimals=5)
-        emb[0] = emb[0].str[len(self._model.label):]
+        emb[0] = emb[0].str[len(self.model.label):]
         emb.set_index(0, inplace=True)
         self.class_embeddings = emb.loc[self._classes]
         os.remove(path)
@@ -253,4 +240,4 @@ class FastTextModel(redditmodel.RedditModel):
         """
         with open(os.path.splitext(filepath)[0] + '.pkl', 'wb') as f:
             pickle.dump(self, f)
-        self._model._model.save_model(os.path.splitext(filepath)[0] + '.bin')
+        self.model._model.save_model(os.path.splitext(filepath)[0] + '.bin')

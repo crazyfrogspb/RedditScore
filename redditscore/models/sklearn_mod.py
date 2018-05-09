@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SklearnModel: A wrapper for several text classification models from Scikit-Learn
+sklearn_mod: A wrapper for Naive Bayes classifiers
 
 Author: Evgenii Nikitin <e.nikitin@nyu.edu>
 
@@ -38,46 +38,10 @@ def load_model(filepath):
     return model
 
 
-class SklearnModel(redditmodel.RedditModel):
-    """SVM and Naive Bayes classifier for multinomial and Bernoulli models
-    with or without tf-idf re-weighting
-
-    Parameters
-    ----------
-    model_type: {'multinomial', 'bernoulli', 'svm'}, optional
-        Model type
-
-        - 'multinomial': MultinomialNB
-        - 'bernoulli': BernoulliNB
-        - 'svm': SVC
-
-    ngrams: int, optional
-        The upper boundary of the range of n-values for different n-grams to be extracted
-
-    tfidf: bool, optional
-        If true, use tf-idf re-weighting
-
-    random_state: integer, optional
-        Random seed
-
-    **kwargs
-         Parameters of the corresponding models. For details check scikit-learn documentation.
-
-    Attributes
-    ----------
-    params : dict
-        Dictionary with model parameters
-    """
-
-    def __init__(self, model_type='multinomial', ngrams=1, tfidf=True, random_state=24, **kwargs):
+class _SklearnModel(redditmodel.RedditModel):
+    # Base class for sklearn models
+    def __init__(self, random_state=24):
         super().__init__(random_state=random_state)
-        self.params = {}
-        self.ngrams = ngrams
-        self.tfidf = tfidf
-        if model_type not in ['multinomial', 'bernoulli', 'svm']:
-            raise ValueError('{} is not supported yet'.format(model_type))
-        self.model_type = model_type
-        self.set_params(**kwargs)
 
     def set_params(self, **params):
         """
@@ -88,18 +52,11 @@ class SklearnModel(redditmodel.RedditModel):
         **params: {'tfidf', 'ngrams', 'random_state'} or
             parameters of the corresponding models
         """
-        for key in ['tfidf', 'ngrams', 'random_state']:
-            if key in params:
-                setattr(self, key, params[key])
-                params.pop(key)
-        self.params.update(params)
-
-        if self.model_type == 'multinomial':
-            model = MultinomialNB(**self.params)
-        elif self.model_type == 'bernoulli':
-            model = BernoulliNB(**self.params)
-        elif self.model_type == 'svm':
-            model = SVC(**self.params)
+        for key, value in params.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            elif hasattr(self.model.named_steps['model'], key):
+                setattr(self.model.named_steps['model'], key, value)
 
         if self.tfidf:
             vectorizer = TfidfVectorizer(
@@ -108,7 +65,9 @@ class SklearnModel(redditmodel.RedditModel):
             vectorizer = CountVectorizer(
                 analyzer=self._build_analyzer(self.ngrams))
 
-        self._model = Pipeline([('vectorizer', vectorizer), ('model', model)])
+        self.model = Pipeline(
+            [('vectorizer', vectorizer),
+             ('model', self.model.named_steps['model'])])
 
         return self
 
@@ -128,3 +87,99 @@ class SklearnModel(redditmodel.RedditModel):
     def _build_analyzer(ngrams):
         # Build analyzer for vectorizers for a given ngram range
         return lambda doc: redditmodel.word_ngrams(doc, (1, ngrams))
+
+
+class MultinomialModel(_SklearnModel):
+    """Naive Bayes multinomial classifier with or without tf-idf re-weighting
+
+    Parameters
+    ----------
+    ngrams: int, optional
+        The upper boundary of the range of n-values for different n-grams to be extracted
+
+    tfidf: bool, optional
+        If true, use tf-idf re-weighting
+
+    random_state: integer, optional
+        Random seed
+
+    **kwargs
+         Parameters of the multinomial model. For details check scikit-learn documentation.
+
+    Attributes
+    ----------
+    params : dict
+        Dictionary with model parameters
+    """
+
+    def __init__(self, ngrams=1, tfidf=True, random_state=24, **kwargs):
+        super().__init__(random_state=random_state)
+        self.ngrams = ngrams
+        self.tfidf = tfidf
+        self.model = Pipeline(
+            [('vectorizer', None), ('model', MultinomialNB())])
+        self.set_params(**kwargs)
+
+
+class BernoulliModel(_SklearnModel):
+    """Naive Bayes Bernoulli classifier with or without tf-idf re-weighting
+
+    Parameters
+    ----------
+    ngrams: int, optional
+        The upper boundary of the range of n-values for different n-grams to be extracted
+
+    tfidf: bool, optional
+        If true, use tf-idf re-weighting
+
+    random_state: integer, optional
+        Random seed
+
+    **kwargs
+         Parameters of the Bernouli model. For details check scikit-learn documentation.
+
+    Attributes
+    ----------
+    params : dict
+        Dictionary with model parameters
+    """
+
+    def __init__(self, ngrams=1, tfidf=True, random_state=24, **kwargs):
+        super().__init__(random_state=random_state)
+        self.ngrams = ngrams
+        self.tfidf = tfidf
+        self.model = Pipeline(
+            [('vectorizer', None), ('model', BernoulliNB())])
+        self.set_params(**kwargs)
+
+
+class SVMModel(_SklearnModel):
+    """SVM classifier with or without tf-idf re-weighting
+
+    Parameters
+    ----------
+    ngrams: int, optional
+        The upper boundary of the range of n-values for different n-grams to be extracted
+
+    tfidf: bool, optional
+        If true, use tf-idf re-weighting
+
+    random_state: integer, optional
+        Random seed
+
+    **kwargs
+         Parameters of the SVM model. For details check scikit-learn documentation.
+
+    Attributes
+    ----------
+    params : dict
+        Dictionary with model parameters
+    """
+
+    def __init__(self, ngrams=1, tfidf=True, random_state=24, **kwargs):
+        super().__init__(random_state=random_state)
+        self.ngrams = ngrams
+        self.tfidf = tfidf
+        self.model = Pipeline(
+            [('vectorizer', None), ('model', SVC())])
+        self.set_params(**kwargs)

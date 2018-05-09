@@ -12,6 +12,7 @@ This work is licensed under the terms of the MIT license.
 
 import json
 import os
+import warnings
 from abc import ABCMeta
 from itertools import product
 
@@ -22,6 +23,7 @@ import pandas as pd
 import scipy.cluster.hierarchy as hac
 from adjustText import adjust_text
 from scipy.cluster.hierarchy import fcluster
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.manifold import TSNE
 from sklearn.metrics import log_loss, make_scorer
@@ -91,7 +93,7 @@ def word_ngrams(tokens, ngram_range):
     return tokens
 
 
-class RedditModel(metaclass=ABCMeta):
+class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
     """Sklearn-style wrapper for the different architectures
 
     Parameters
@@ -103,7 +105,7 @@ class RedditModel(metaclass=ABCMeta):
     ----------
     model_type : str
         Model type name
-    _model : model object
+    model : model object
         Model object that is being fitted
     params : dict
         Dictionary with model parameters
@@ -119,12 +121,11 @@ class RedditModel(metaclass=ABCMeta):
 
     def __init__(self, random_state=24):
         self.random_state = random_state
-        self.model_type = None
-        self._model = None
-        self.params = None
+        self.model = None
         self._classes = None
         self.fitted = False
         self.class_embeddings = None
+        self.params = {}
 
         np.random.seed(random_state)
 
@@ -176,7 +177,7 @@ class RedditModel(metaclass=ABCMeta):
         if scoring == 'neg_log_loss':
             scoring = make_scorer(log_loss, labels=self._classes,
                                   greater_is_better=False, needs_proba=True)
-        return cross_val_score(self._model, X, y, cv=cv_split,
+        return cross_val_score(self.model, X, y, cv=cv_split,
                                scoring=scoring)
 
     def tune_params(self, X, y, param_grid=None,
@@ -296,7 +297,7 @@ class RedditModel(metaclass=ABCMeta):
             X = np.array(X)
         if not isinstance(y, np.ndarray):
             y = np.array(y)
-        self._model.fit(X, y)
+        self.model.fit(X, y)
         self.fitted = True
         return self
 
@@ -320,7 +321,7 @@ class RedditModel(metaclass=ABCMeta):
             raise NotFittedError('Model has to be fitted first')
         if not isinstance(X, np.ndarray):
             X = np.array(X)
-        return self._model.predict(X)
+        return self.model.predict(X)
 
     def predict_proba(self, X):
         """Predict the most likely label
@@ -342,7 +343,7 @@ class RedditModel(metaclass=ABCMeta):
             raise NotFittedError('Model has to be fitted first')
         if not isinstance(X, np.ndarray):
             X = np.array(X)
-        return self._model.predict_proba(X)
+        return self.model.predict_proba(X)
 
     def get_params(self, deep=None):
         """
@@ -353,7 +354,11 @@ class RedditModel(metaclass=ABCMeta):
         dict
             Dictionary with model parameters
         """
-        return self.params
+        params = {}
+        for key in self._get_param_names():
+            params[key] = getattr(self, key, None)
+        params.update(self.model.get_params())
+        return params
 
     def set_params(self, **params):
         """Set parameters of the model
@@ -363,7 +368,19 @@ class RedditModel(metaclass=ABCMeta):
         **params
             Model parameters to update
         """
-        self.params.update(params)
+        if not params:
+            return self
+
+        for key, value in params.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+                self.params[key] = value
+            elif hasattr(self.model, key):
+                setattr(self.model, key, value)
+                self.params[key] = value
+            else:
+                warnings.warn('Parameter {} does not exist'.format(key))
+        return self
 
     def plot_analytics(self, classes=None, fig_sizes=((20, 15), (20, 20)),
                        linkage_pars=None, dendrogram_pars=None,
