@@ -12,9 +12,7 @@ This work is licensed under the terms of the MIT license.
 
 import dill as pickle
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.naive_bayes import BernoulliNB, MultinomialNB
 from sklearn.pipeline import Pipeline
-from sklearn.svm import SVC
 
 from . import redditmodel
 
@@ -38,10 +36,39 @@ def load_model(filepath):
     return model
 
 
-class _SklearnModel(redditmodel.RedditModel):
-    # Base class for sklearn models
-    def __init__(self, random_state=24):
+class SklearnModel(redditmodel.RedditModel):
+    """A wrapper for scikit-learn models with or without tf-idf re-weighting
+    Parameters
+    ----------
+    estimator: scikit-learn model
+        Estimator object (classifier or regressor)
+    ngrams: int, optional
+        The upper boundary of the range of n-values for different n-grams to be extracted
+    tfidf: bool, optional
+        If true, use tf-idf re-weighting
+    random_state: integer, optional
+        Random seed
+    **kwargs
+         Parameters of the multinomial model. For details check scikit-learn documentation.
+    Attributes
+    ----------
+    params : dict
+        Dictionary with model parameters
+    """
+
+    def __init__(self, estimator, ngrams=1, tfidf=True, random_state=24):
         super().__init__(random_state=random_state)
+        self.ngrams = ngrams
+        self.tfidf = tfidf
+
+        if self.tfidf:
+            vectorizer = TfidfVectorizer(
+                analyzer=self._build_analyzer(self.ngrams))
+        else:
+            vectorizer = CountVectorizer(
+                analyzer=self._build_analyzer(self.ngrams))
+        self.model = Pipeline(
+            [('vectorizer', vectorizer), ('model', estimator)])
 
     def set_params(self, **params):
         """
@@ -87,99 +114,3 @@ class _SklearnModel(redditmodel.RedditModel):
     def _build_analyzer(ngrams):
         # Build analyzer for vectorizers for a given ngram range
         return lambda doc: redditmodel.word_ngrams(doc, (1, ngrams))
-
-
-class MultinomialModel(_SklearnModel):
-    """Naive Bayes multinomial classifier with or without tf-idf re-weighting
-
-    Parameters
-    ----------
-    ngrams: int, optional
-        The upper boundary of the range of n-values for different n-grams to be extracted
-
-    tfidf: bool, optional
-        If true, use tf-idf re-weighting
-
-    random_state: integer, optional
-        Random seed
-
-    **kwargs
-         Parameters of the multinomial model. For details check scikit-learn documentation.
-
-    Attributes
-    ----------
-    params : dict
-        Dictionary with model parameters
-    """
-
-    def __init__(self, ngrams=1, tfidf=True, random_state=24, **kwargs):
-        super().__init__(random_state=random_state)
-        self.ngrams = ngrams
-        self.tfidf = tfidf
-        self.model = Pipeline(
-            [('vectorizer', None), ('model', MultinomialNB())])
-        self.set_params(**kwargs)
-
-
-class BernoulliModel(_SklearnModel):
-    """Naive Bayes Bernoulli classifier with or without tf-idf re-weighting
-
-    Parameters
-    ----------
-    ngrams: int, optional
-        The upper boundary of the range of n-values for different n-grams to be extracted
-
-    tfidf: bool, optional
-        If true, use tf-idf re-weighting
-
-    random_state: integer, optional
-        Random seed
-
-    **kwargs
-         Parameters of the Bernouli model. For details check scikit-learn documentation.
-
-    Attributes
-    ----------
-    params : dict
-        Dictionary with model parameters
-    """
-
-    def __init__(self, ngrams=1, tfidf=True, random_state=24, **kwargs):
-        super().__init__(random_state=random_state)
-        self.ngrams = ngrams
-        self.tfidf = tfidf
-        self.model = Pipeline(
-            [('vectorizer', None), ('model', BernoulliNB())])
-        self.set_params(**kwargs)
-
-
-class SVMModel(_SklearnModel):
-    """SVM classifier with or without tf-idf re-weighting
-
-    Parameters
-    ----------
-    ngrams: int, optional
-        The upper boundary of the range of n-values for different n-grams to be extracted
-
-    tfidf: bool, optional
-        If true, use tf-idf re-weighting
-
-    random_state: integer, optional
-        Random seed
-
-    **kwargs
-         Parameters of the SVM model. For details check scikit-learn documentation.
-
-    Attributes
-    ----------
-    params : dict
-        Dictionary with model parameters
-    """
-
-    def __init__(self, ngrams=1, tfidf=True, random_state=24, **kwargs):
-        super().__init__(random_state=random_state)
-        self.ngrams = ngrams
-        self.tfidf = tfidf
-        self.model = Pipeline(
-            [('vectorizer', None), ('model', SVC())])
-        self.set_params(**kwargs)

@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 import pytest
+from sklearn.naive_bayes import MultinomialNB
 
 from redditscore.models import fasttext_mod, sklearn_mod
 from redditscore.tokenizer import CrazyTokenizer
@@ -17,8 +18,8 @@ pytest.X = df['tokens']
 pytest.X_str = df['tokens'].str.join(' ')
 pytest.y = df['subreddit']
 
-pytest.MM = sklearn_mod.MultinomialModel(alpha=0.1, random_state=24,
-                                         tfidf=False, ngrams=2)
+pytest.MM = sklearn_mod.SklearnModel(MultinomialNB(alpha=0.1),
+                                     tfidf=False, ngrams=2)
 pytest.MM.fit(pytest.X, pytest.y)
 pytest.FM = fasttext_mod.FastTextModel(minCount=5)
 pytest.FM.fit(pytest.X, pytest.y)
