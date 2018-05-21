@@ -224,12 +224,24 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
         """
         self._classes = sorted(np.unique(y))
 
+        model_name = None
         if param_grid is None:
+            model_type = self.model.__class__.__name__
+            if model_type == 'FastTextClassifier':
+                model_name = 'fasttext'
+            elif model_type == 'Pipeline':
+                model_type = self.model.named_steps['model'].__class__.__name__
+                if model_type in ['SVC', 'SVR']:
+                    model_name = 'SVM'
+                elif model_type in ['BernoulliNB', 'MultinomialNB']:
+                    model_name = 'bayes'
+            if model_name is None:
+                raise ValueError(
+                    'Default grid for model {} is not found'.format(model_type))
             file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 os.path.join('..', 'data', 'model_pars.json'))
             with open(file) as f:
-                param_grid = json.load(f)[
-                    self.model_type]
+                param_grid = json.load(f)[model_name]
 
         if 'step0' not in param_grid:
             param_grid_temp = {'step0': param_grid}

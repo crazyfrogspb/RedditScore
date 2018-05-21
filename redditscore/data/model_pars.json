@@ -1,22 +1,16 @@
 {
-	"multinomial": {
+	"bayes": {
 		"step0": {
 			"alpha": [1e-10, 0.001, 0.01, 0.1, 0.5, 1, 2],
 			"tfidf": [false, true],
-			"ngrams": [1, 2, 3]
-		}
-	},
-	"bernoulli": {
-		"step0": {
-			"alpha": [1e-10, 0.001, 0.01, 0.1, 0.5, 1, 2],
-			"tfidf": [false, true],
-			"ngrams": [1, 2, 3]
+			"ngrams": [1, 2]
 		}
 	},
 	"SVM": {
 		"step0": {
-			"C": [0.00001, 0.001, 0.1, 1],
-			"ngram_range": [1, 2, 3]
+			"C": [0.01, 0.1, 1.0, 2.5, 5.0],
+			"ngram_range": [1, 2],
+            "tfidf": [false, true]
 		}
 	},
 	"fasttext": {

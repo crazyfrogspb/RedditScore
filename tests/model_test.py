@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from sklearn.naive_bayes import MultinomialNB
 
-from redditscore.models import fasttext_mod, sklearn_mod
+from redditscore.models import bow_mod, fasttext_mod
 from redditscore.tokenizer import CrazyTokenizer
 
 df = pd.read_csv(os.path.join(os.path.dirname(__file__), '..',
@@ -18,8 +18,8 @@ pytest.X = df['tokens']
 pytest.X_str = df['tokens'].str.join(' ')
 pytest.y = df['subreddit']
 
-pytest.MM = sklearn_mod.SklearnModel(MultinomialNB(alpha=0.1),
-                                     tfidf=False, ngrams=2)
+pytest.MM = bow_mod.BoWModel(MultinomialNB(alpha=0.1),
+                             tfidf=False, ngrams=2)
 pytest.MM.fit(pytest.X, pytest.y)
 pytest.FM = fasttext_mod.FastTextModel(minCount=5)
 pytest.FM.fit(pytest.X, pytest.y)
@@ -34,6 +34,10 @@ def test_set_params():
     assert pytest.FM.get_params()['minCount'] == 5
     pytest.FM.set_params(minCount=7, random_state=2018)
     assert pytest.FM.get_params()['minCount'] == 7
+
+
+def test_default_tuning():
+    pytest.MM.tune_params(pytest.X, pytest.y, cv=0.2, scoring='accuracy')
 
 
 def test_multimodel():
@@ -73,7 +77,7 @@ def test_dendrogram():
 def test_save_load():
     pytest.MM.save_model('multi.pkl')
     pytest.FM.save_model('fasttext')
-    pytest.MM = sklearn_mod.load_model('multi.pkl')
+    pytest.MM = bow_mod.load_model('multi.pkl')
     pytest.FM = fasttext_mod.load_model('fasttext')
     os.remove('multi.pkl')
     os.remove('fasttext.pkl')
