@@ -38,6 +38,7 @@ def load_model(filepath):
 
 class BoWModel(redditmodel.RedditModel):
     """A wrapper for Bag-of-Words models with or without tf-idf re-weighting
+
     Parameters
     ----------
     estimator: scikit-learn model
@@ -54,6 +55,7 @@ class BoWModel(redditmodel.RedditModel):
 
     **kwargs
          Parameters of the multinomial model. For details check scikit-learn documentation.
+
     Attributes
     ----------
     params : dict
