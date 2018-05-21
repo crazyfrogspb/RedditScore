@@ -5,7 +5,7 @@ You collected your training data, coverted it to the lists of tokens, now you ca
 
 RedditScore currently supports training the following types of models:
 
-    - Any models from `scikit-learn package <http://scikit-learn.org>`__
+    - Bag-of-Words models
     - `fastText model <https://github.com/facebookresearch/fastText>`__
     - MLP, LSTM, CNN neural networks (Keras implementation) - TODO
 
@@ -17,7 +17,7 @@ All model wrappers have very similar interface:
 .. code:: python
 
     from redditscore import tokenizer
-    from redditscore.models import fasttext_mod, sklearn_mod
+    from redditscore.models import fasttext_mod, bow_mod
     from sklearn.naive_bayes import MultinomialNB
 
     # reading and tokenizing data
@@ -28,7 +28,7 @@ All model wrappers have very similar interface:
     y = df['subreddit']
 
     fasttext_model = fasttext_mod.FastTextModel(epochs=5, minCount=5)
-    multi_model = sklearn_mod.SklearnModel(estimator=MultinomialNB(alpha=0.1), ngrams=2, tfidf=False)
+    multi_model = sklearn_mod.BoWModel(estimator=MultinomialNB(alpha=0.1), ngrams=2, tfidf=False)
 
     fasttext_model.fit(X, y)
     multi_model.fit(X, y)

@@ -301,7 +301,7 @@ corresponding word tokens.
 
 You can supply your own lists of emojis as well.
 
->>> tokenizer = CrazyTokenizer(pos_emojis=['🌮', '🍔'], neutral_emojis=['😕'], removepunct=False)
+>>> tokenizer = CrazyTokenizer(pos_emojis=['🌮', '🍔'], neutral_emojis=['😕'], remove_punct=False)
 >>> text = '🌮 + 🍔 = 😕'
 >>> tokenizer.tokenize(text)
 ['POS_EMOJI', '+', 'POS_EMOJI', '=', 'NEUTRAL_EMOJI']
