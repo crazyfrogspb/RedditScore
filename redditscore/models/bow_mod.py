@@ -42,12 +42,16 @@ class BoWModel(redditmodel.RedditModel):
     ----------
     estimator: scikit-learn model
         Estimator object (classifier or regressor)
+
     ngrams: int, optional
         The upper boundary of the range of n-values for different n-grams to be extracted
+
     tfidf: bool, optional
         If true, use tf-idf re-weighting
+
     random_state: integer, optional
         Random seed
+
     **kwargs
          Parameters of the multinomial model. For details check scikit-learn documentation.
     Attributes
