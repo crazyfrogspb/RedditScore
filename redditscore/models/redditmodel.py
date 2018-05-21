@@ -71,7 +71,7 @@ def fancy_dendrogram(z, labels, **kwargs):
     return ddata
 
 
-def word_ngrams(tokens, ngram_range):
+def word_ngrams(tokens, ngram_range, separator=' '):
     # Extract ngrams from the tokenized sequence
     min_n, max_n = ngram_range
     if max_n != 1:
@@ -85,7 +85,7 @@ def word_ngrams(tokens, ngram_range):
         n_original_tokens = len(original_tokens)
 
         tokens_append = tokens.append
-        space_join = " ".join
+        space_join = separator.join
 
         for num in range(min_n, min(max_n + 1, n_original_tokens + 1)):
             for i in range(n_original_tokens - num + 1):

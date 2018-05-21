@@ -43,6 +43,14 @@ annoying_case = 'b@realDonaldTrump@crazyfrogspb crazy@mail.ru #maga#russiago htt
 hex_text = "I\\xe2\\x80\\x99m so annoyed by these characters \\xF0\\x9F\\x98\\xA2"
 realname_text = "@realDonaldTrump please #makeamericagreatagain"
 splithandle_text = '@realDonaldTrump loves @BreitbartNews'
+ngrams_text = 'we need more tokens'
+
+
+def test_ngrams():
+    tokenizer = CrazyTokenizer(ngrams=2)
+    tokens = tokenizer.tokenize(ngrams_text)
+    assert tokens == ['we', 'need', 'more', 'tokens',
+                      'we_need', 'need_more', 'more_tokens']
 
 
 def test_emoji():

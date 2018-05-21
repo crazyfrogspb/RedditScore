@@ -313,4 +313,16 @@ If your data contains a lot of substrings that look like this: ``\\xe2\\x80\\x99
 or this: ``U+1F601``, try setting ``latin_chars_fix=True``.
 
 >>> tokenizer = CrazyTokenizer(latin_chars_fix=True)
->>> s = "I\\xe2\\x80\\x99m so annoyed by these characters \\xF0\\x9F\\x98\\xA2"
+>>> text = "I\\xe2\\x80\\x99m so annoyed by these characters \\xF0\\x9F\\x98\\xA2"
+>>> tokenizer.tokenize(text)
+['i', 'm', 'so', 'annoyed', 'by', 'these', 'characters', '😢']
+
+n-grams
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+You can add n-grams of tokens to the original list of tokens by using options
+``ngrams``.
+
+>>> tokenizer = CrazyTokenizer(ngrams=2)
+>>> text = "We need more tokens"
+>>> tokenizer.tokenize(text)
+['we', 'need', 'more', 'tokens', 'we_need', 'need_more', 'more_tokens']

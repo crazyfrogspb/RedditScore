@@ -34,12 +34,15 @@ from spacy.lang.en import English
 from spacy.matcher import Matcher
 from spacy.tokens import Doc, Token
 
+from .models.redditmodel import word_ngrams
+
 try:
     from nltk.corpus import stopwords
     from nltk.stem import PorterStemmer, WordNetLemmatizer
 except ImportError:
     warnings.warn(
         'nltk could not be imported, some features will be unavailable')
+
 
 Token.set_extension('transformed_text', default='', force=True)
 Doc.set_extension('tokens', default='', force=True)
@@ -321,6 +324,9 @@ class CrazyTokenizer(object):
     latin_chars_fix: bool, optional
         Try applying this fix if you have a lot of \\xe2\\x80\\x99-like
         or U+1F601-like strings in your data. Defaults to False.
+
+    ngrams: int, optional
+        Add ngrams of tokens after tokenizing
     """
 
     def __init__(self, lowercase=True, keepcaps=False, normalize=3,
@@ -332,7 +338,8 @@ class CrazyTokenizer(object):
                  emails=False, extra_patterns=None, keep_untokenized=None,
                  whitespaces_to_underscores=True, remove_nonunicode=False,
                  pos_emojis=None, neg_emojis=None, neutral_emojis=None,
-                 print_url_warnings=False, latin_chars_fix=False):
+                 print_url_warnings=False, latin_chars_fix=False,
+                 ngrams=1):
         self.params = locals()
 
         self._nlp = English()
@@ -790,4 +797,12 @@ class CrazyTokenizer(object):
             return []
         text = self._preprocess_text(text)
         doc = self._nlp(text)
-        return doc._.tokens
+        tokens = doc._.tokens
+        if self.params['ngrams'] > 1:
+            if self.params['whitespaces_to_underscores']:
+                tokens = word_ngrams(
+                    tokens, (1, self.params['ngrams']), separator='_')
+            else:
+                tokens = word_ngrams(
+                    tokens, (1, self.params['ngrams']))
+        return tokens
