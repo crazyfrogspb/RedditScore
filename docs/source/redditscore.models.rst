@@ -36,10 +36,10 @@ redditscore.models.redditmodel module
     :undoc-members:
     :show-inheritance:
 
-redditscore.models.sklearn module
+redditscore.models.bow_mod module
 ---------------------------------
 
-.. automodule:: redditscore.models.sklearn_mod
+.. automodule:: redditscore.models.bow_mod
     :members:
     :undoc-members:
     :show-inheritance:
