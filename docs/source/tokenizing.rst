@@ -8,7 +8,7 @@ CrazyTokenizer is a part of `RedditScore project <https://github.com/crazyfrogsp
 It's a tokenizer - tool for splitting strings of text into tokens. Tokens can
 then be used as input for a variety of machine learning models.
 CrazyTokenizer was developed specifically for tokenizing Reddit comments and
-tweets, and it includes many features toNote deal with these types of documents.
+tweets, and it includes many features to deal with these types of documents.
 Of course, feel free to use for any other kind of text data as well.
 
 CrazyTokenizer is based on the amazing `spaCY NLP framework <https://spacy.io/>`__.

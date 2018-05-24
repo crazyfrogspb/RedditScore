@@ -34,7 +34,7 @@ from spacy.lang.en import English
 from spacy.matcher import Matcher
 from spacy.tokens import Doc, Token
 
-from .models.redditmodel import word_ngrams
+from redditscore.models.redditmodel import word_ngrams
 
 try:
     from nltk.corpus import stopwords
