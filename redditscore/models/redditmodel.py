@@ -10,10 +10,12 @@ Copyright (c) 2018 Evgenii Nikitin. All rights reserved.
 This work is licensed under the terms of the MIT license.
 """
 
+import collections
 import json
 import os
 import warnings
 from abc import ABCMeta
+from collections import Sequence
 from itertools import product
 
 import matplotlib.cm as cm
@@ -29,6 +31,7 @@ from sklearn.manifold import TSNE
 from sklearn.metrics import log_loss, make_scorer
 from sklearn.model_selection import (PredefinedSplit, check_cv,
                                      cross_val_score, train_test_split)
+from sklearn.preprocessing import MultiLabelBinarizer
 
 DEFAULT_LINKAGE_PARS = {'method': 'average', 'metric': 'cosine',
                         'optimal_ordering': True}
@@ -41,6 +44,28 @@ DEFAULT_TSNE_PARS = {'perplexity': 10.0, 'early_exaggeration': 30.0,
 DEFAULT_LEGEND_PARS = {'loc': 'best', 'bbox_to_anchor': (1, 0.5),
                        'fancybox': True, 'shadow': True, 'labels': [],
                        'fontsize': 16}
+
+
+def top_k_accuracy_score(y_true, y_pred, k=3, normalize=True):
+    true_labels = list(y_pred.columns)
+    if not isinstance(y_pred, np.ndarray):
+        y_pred = np.array(y_pred.values)
+    if not isinstance(y_true, np.ndarray):
+        y_true = np.array(y_true)
+    if len(y_true.shape) == 2:
+        y_true = np.argmax(y_true, axis=1)
+
+    num_obs, num_labels = y_pred.shape
+    idx = num_labels - k - 1
+    counter = 0
+    argsorted = np.argsort(y_pred, axis=1)
+    for i in range(num_obs):
+        if true_labels.index(y_true[i]) in argsorted[i, idx + 1:]:
+            counter += 1
+    if normalize:
+        return counter / num_obs
+    else:
+        return counter
 
 
 def fancy_dendrogram(z, labels, **kwargs):
@@ -93,6 +118,14 @@ def word_ngrams(tokens, ngram_range, separator=' '):
     return tokens
 
 
+def flatten(l):
+    for el in l:
+        if isinstance(el, collections.Iterable) and not isinstance(el, (str, bytes)):
+            yield from flatten(el)
+        else:
+            yield el
+
+
 class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
     """Sklearn-style wrapper for the different architectures
 
@@ -129,7 +162,7 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
 
         np.random.seed(random_state)
 
-    def cv_score(self, X, y, cv=0.2, scoring='accuracy'):
+    def cv_score(self, X, y, cv=0.2, scoring='accuracy', k=3):
         """Calculate validation score
 
         Parameters
@@ -150,7 +183,10 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
             - An iterable yielding train, test splits.
 
         scoring : string, callable or None, optional, optional
-            A string (see sklearn model evaluation documentation) or a scorer callable object
+            A string (see sklearn model evaluation documentation) or a scorer callable object or 'top_k_accuracy'
+
+        k: int, optional
+            k parameter for 'top_k_accuracy' scoring
 
         Returns
         ----------
@@ -161,6 +197,11 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
             X = np.array(X)
         if not isinstance(y, np.ndarray):
             y = np.array(y)
+
+        if (not hasattr(y[0], '__array__') and isinstance(y[0], Sequence)
+                and not isinstance(y[0], str)):
+            raise ValueError(
+                'Cross validation does not support multilabels yet')
 
         self._classes = sorted(np.unique(y))
         np.random.seed(self.random_state)
@@ -177,11 +218,14 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
         if scoring == 'neg_log_loss':
             scoring = make_scorer(log_loss, labels=self._classes,
                                   greater_is_better=False, needs_proba=True)
+        elif scoring == 'top_k_accuracy':
+            scoring = make_scorer(top_k_accuracy_score, k=k,
+                                  greater_is_better=True, needs_proba=True)
         return cross_val_score(self.model, X, y, cv=cv_split,
                                scoring=scoring)
 
     def tune_params(self, X, y, param_grid=None,
-                    verbose=False, cv=0.2, scoring='accuracy', refit=False):
+                    verbose=False, cv=0.2, scoring='accuracy', k=3, refit=False):
         """Find the best values of hyperparameters using chosen validation scheme
 
         Parameters
@@ -210,7 +254,10 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
             - An iterable yielding train, test splits.
 
         scoring : string, callable or None, optional
-            A string (see sklearn model evaluation documentation) or a scorer callable object
+            A string (see sklearn model evaluation documentation) or a scorer callable object or 'top_k_accuracy'
+
+        k: int, optional
+            k parameter for 'top_k_accuracy' scoring
 
         refit: boolean, optional
             If True, refit model with the best found parameters

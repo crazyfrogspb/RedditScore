@@ -14,6 +14,7 @@ import os
 import pickle
 import tempfile
 import warnings
+from collections import Sequence
 
 import fastText
 import numpy as np
@@ -56,13 +57,30 @@ def load_model(filepath):
     return model
 
 
+def check_multilabel(y):
+    if y is None:
+        return False
+    elif isinstance(y[0], Sequence) and not isinstance(y[0], str):
+        return True
+    else:
+        return False
+
+
 def _data_to_temp(X, label, y=None):
     # Generate temorary file
     fd, path = tempfile.mkstemp()
+    multilabel = check_multilabel(y)
     with os.fdopen(fd, 'w') as tmp:
         for i in range(X.shape[0]):
             if y is not None:
-                doc = label + y[i] + ' '
+                doc = ''
+
+                if multilabel:
+                    for true_label in y[i]:
+                        doc += label + true_label + ' '
+                else:
+                    doc += label + y[i] + ' '
+
                 if isinstance(X[i], list):
                     doc += ' '.join(X[i])
                 elif isinstance(X[i], str):
@@ -213,7 +231,12 @@ class FastTextModel(redditmodel.RedditModel):
         if not isinstance(y, np.ndarray):
             y = np.array(y)
 
-        self._classes = np.array(sorted(np.unique(y)))
+        if check_multilabel(y):
+            unique_labels = np.unique(list(redditmodel.flatten(y)))
+        else:
+            unique_labels = np.unique(y)
+
+        self._classes = np.array(sorted(unique_labels))
         self.model.fit(X, y)
         fd, path = tempfile.mkstemp()
         self.model._model.save_softmax(path)
