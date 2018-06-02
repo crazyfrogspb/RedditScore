@@ -27,8 +27,8 @@ Jan 2016 to May 2016. This is how you do it:
 >>> project_id = "my_first_project" # insert your Project ID here
 >>> private_key = 'my_key.json' # insert path to your key file here
 >>> subreddits = ['BeardAdvice', 'beards']
->>> df = grd.get_comments(subreddits, ('2016_01', '2016_05'),
->>>                       project_id, private_key, verbose=True)
+>>> df = grd.get_comments(('2016_01', '2016_05'),
+>>>                       project_id, private_key, subreddits, verbose=True)
 
 ``df`` is a pandas DataFrame with collected comments.
 
@@ -36,23 +36,28 @@ Jan 2016 to May 2016. This is how you do it:
 
   - Saving results by month into CSV files instead of returning a DataFrame:
 
-  >>> grd.get_comments(subreddits, ('2016_01', '2016_05'), project_id, private_key,
+  >>> grd.get_comments(('2016_01', '2016_05'), project_id, private_key, subreddits,
   >>>                  verbose=True, csv_directory='reddit_data')
 
   - Getting a random sample of comments from each subreddit per month:
 
-  >>> df = grd.get_comments(subreddits, ('2016_01', '2016_05'), project_id, private_key,
+  >>> df = grd.get_comments(('2016_01', '2016_05'), project_id, private_key, subreddits,
   >>>                       verbose=True, comments_per_month=1000)
 
   - Getting top-scoring comments from each subreddit per month:
 
-  >>> df = grd.get_comments(subreddits, ('2016_01', '2016_05'), project_id, private_key,
+  >>> df = grd.get_comments(('2016_01', '2016_05'), project_id, private_key, subreddits,
   >>>                       verbose=True, comments_per_month=1000, top_scores=True)
 
   - Filtering out comments with low scores:
 
-  >>> df = grd.get_comments(subreddits, ('2016_01', '2016_05'), project_id, private_key,
+  >>> df = grd.get_comments(('2016_01', '2016_05'), project_id, private_key, subreddits,
   >>>                       verbose=True, score_limit=3)
+
+  - Getting comments for a subset of users:
+
+  >>> df = grd.get_comments(('2016_01', '2016_05'), project_id, private_key, subreddits,
+  >>>                       usernames=['crazyfrogspb', 'VladimirVladimirovich'], verbose=True)
 
 Twitter Data
 --------------------

@@ -19,10 +19,25 @@ def add_months(sourcedate, months):
     return datetime.date(year, month, day)
 
 
-def construct_query(subreddits, month, score_limit=None):
+def check_input(subreddits, usernames):
+    if subreddits:
+        subreddits = '", "'.join(subreddits)
+        subreddits = '"' + subreddits + '"'
+        subreddits = 'AND subreddit in (' + subreddits + ')'
+    else:
+        subreddits = ''
+    if usernames:
+        usernames = '", "'.join(usernames)
+        usernames = '"' + usernames + '"'
+        usernames = 'AND author in (' + usernames + ')'
+    else:
+        usernames = ''
+    return subreddits, usernames
+
+
+def construct_query(subreddits, usernames, month, score_limit=None):
     # Construct a query string
-    subreddits = '", "'.join(subreddits)
-    subreddits = '"' + subreddits + '"'
+    subreddits, usernames = check_input(subreddits, usernames)
     if score_limit is None:
         score = ""
     else:
@@ -39,8 +54,7 @@ def construct_query(subreddits, month, score_limit=None):
         score
     FROM [fh-bigquery:reddit_comments.""" + month + """]
     WHERE
-        subreddit in (""" + subreddits + """)
-        AND body != '[deleted]'
+        body != '[deleted]'
         AND body != '[removed]'
         AND body NOT LIKE '%has been removed%'
         AND body NOT LIKE '%has been overwritten%'
@@ -48,14 +62,14 @@ def construct_query(subreddits, month, score_limit=None):
         AND body NOT LIKE '%bot action performed%'
         AND body NOT LIKE '%autowikibot%'
         AND body NOT LIKE '%I am a bot%'
-        AND LENGTH(body) > 0""" + score
+        AND LENGTH(body) > 0""" + score + subreddits + usernames
     return query
 
 
-def construct_sample_score_query(subreddits, month, sample_size, score_limit=None):
+def construct_sample_score_query(subreddits, usernames, month, sample_size,
+                                 score_limit=None):
     # Construct a query with sampling top-scoring comments
-    subreddits = '", "'.join(subreddits)
-    subreddits = '"' + subreddits + '"'
+    subreddits, usernames = check_input(subreddits, usernames)
     if score_limit is None:
         score = ""
     else:
@@ -83,8 +97,7 @@ def construct_sample_score_query(subreddits, month, sample_size, score_limit=Non
             ROW_NUMBER() OVER(PARTITION BY subreddit ORDER BY score DESC) as pos
         FROM [fh-bigquery:reddit_comments.""" + month + """]
         WHERE
-            subreddit in (""" + subreddits + """)
-            AND body != '[deleted]'
+            body != '[deleted]'
             AND body != '[removed]'
             AND body NOT LIKE '%has been removed%'
             AND body NOT LIKE '%has been overwritten%'
@@ -92,16 +105,15 @@ def construct_sample_score_query(subreddits, month, sample_size, score_limit=Non
             AND body NOT LIKE '%bot action performed%'
             AND body NOT LIKE '%autowikibot%'
             AND body NOT LIKE '%I am a bot%'
-            AND LENGTH(body) > 0""" + score + """
+            AND LENGTH(body) > 0""" + score + subreddits + usernames + """
     )
     WHERE pos <= """ + str(sample_size)
     return query
 
 
-def construct_sample_query(subreddits, month, sample_size, score_limit=None):
+def construct_sample_query(subreddits, usernames, month, sample_size, score_limit=None):
     # Constuct a query string with random sampling
-    subreddits = '", "'.join(subreddits)
-    subreddits = '"' + subreddits + '"'
+    subreddits, usernames = check_input(subreddits, usernames)
     if score_limit is None:
         score = ""
     else:
@@ -130,8 +142,7 @@ def construct_sample_query(subreddits, month, sample_size, score_limit=None):
             ROW_NUMBER() OVER(PARTITION BY subreddit ORDER BY rnd) as pos
         FROM [fh-bigquery:reddit_comments.""" + month + """]
         WHERE
-            subreddit in (""" + subreddits + """)
-            AND body != '[deleted]'
+            body != '[deleted]'
             AND body != '[removed]'
             AND body NOT LIKE '%has been removed%'
             AND body NOT LIKE '%has been overwritten%'
@@ -139,23 +150,21 @@ def construct_sample_query(subreddits, month, sample_size, score_limit=None):
             AND body NOT LIKE '%bot action performed%'
             AND body NOT LIKE '%autowikibot%'
             AND body NOT LIKE '%I am a bot%'
-            AND LENGTH(body) > 0""" + score + """
+            AND LENGTH(body) > 0""" + score + subreddits + usernames + """
     )
     WHERE pos <= """ + str(sample_size)
     return query
 
 
-def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
-                 comments_per_month=None, top_scores=False,
-                 csv_directory=None, verbose=False, configuration=None):
+def get_comments(timerange, project_id, private_key,
+                 subreddits=None, usernames=None, score_limit=None,
+                 comments_per_month=None, top_scores=False, csv_directory=None,
+                 verbose=False, configuration=None):
     """
     Obtain Reddit comments using Google BigQuery
 
     Parameters
     ----------
-    subreddits: list
-        List of subreddit names
-
     timerange: iterable, shape (2,)
         Start and end dates in the '%Y_%m' format.
         Example: ('2016_08', '2017_02')
@@ -166,6 +175,12 @@ def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
     private_key: str
         File path to JSON file with service account private key
         https://cloud.google.com/bigquery/docs/reference/libraries
+
+    subreddits: list, optional
+        List of subreddit names
+
+    usernames: list, optional
+        List of usernames
 
     score_limit: int, optional
         Score limit for comment retrieving. If None, retrieve all comments.
@@ -190,12 +205,19 @@ def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
 
     Returns
     ----------
-    df: pandas DataFrame
-        DataFrame with comments.
+    dfs: list
+        List of pd.DataFrames with comments
     """
-    if not isinstance(subreddits, list):
+    if subreddits and not isinstance(subreddits, list):
         raise ValueError(
             'subreddits argument must be a list, not {}'.format(type(subreddits)))
+    if usernames and not isinstance(usernames, list):
+        raise ValueError(
+            'usernames argument must be a list, not {}'.format(type(usernames)))
+    if not usernames and not subreddits:
+        raise ValueError(
+            'You have to specify a list of subreddits or a list of usernames')
+
     if (comments_per_month is not None) and \
             not isinstance(comments_per_month, int):
         raise ValueError('comments_per_month must be an integer, not {}'.format(
@@ -228,13 +250,14 @@ def get_comments(subreddits, timerange, project_id, private_key, score_limit=0,
             print(
                 'Querying from [fh-bigquery:reddit_comments.{}]'.format(table_name))
         if comments_per_month is None:
-            query = construct_query(subreddits, table_name, score_limit)
+            query = construct_query(
+                subreddits, usernames, table_name, score_limit)
         elif top_scores:
             query = construct_sample_score_query(
-                subreddits, table_name, comments_per_month, score_limit)
+                subreddits, usernames, table_name, comments_per_month, score_limit)
         else:
             query = construct_sample_query(
-                subreddits, table_name, comments_per_month, score_limit)
+                subreddits, usernames, table_name, comments_per_month, score_limit)
         df = gbq.read_gbq(query, project_id=project_id,
                           private_key=private_key, configuration=configuration)
         if csv_directory is None:
