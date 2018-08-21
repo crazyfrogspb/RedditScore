@@ -28,6 +28,8 @@ selenium = "*"
 eventlet = "*"
 yapf = "*"
 seaborn = "*"
+torch = "*"
+torchvision = "*"
 
 [requires]
 python_version = "3.5"
