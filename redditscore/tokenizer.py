@@ -13,6 +13,7 @@ Copyright (c) 2018 Evgenii Nikitin. All rights reserved.
 This work is licensed under the terms of the MIT license.
 """
 
+import html
 import json
 import os
 import re
@@ -26,15 +27,15 @@ from socket import gaierror
 from urllib import parse
 
 import requests
-import tldextract
 from bs4 import BeautifulSoup
+
+import tldextract
 from eventlet.green.urllib.request import urlopen
 from eventlet.timeout import Timeout
+from redditscore.models.redditmodel import word_ngrams
 from spacy.lang.en import English
 from spacy.matcher import Matcher
 from spacy.tokens import Doc, Token
-
-from redditscore.models.redditmodel import word_ngrams
 
 try:
     from nltk.corpus import stopwords
@@ -449,11 +450,11 @@ class CrazyTokenizer(object):
                               [{subreddit_flag: True}])
             self._replacements['SUBREDDIT'] = subreddits
 
-        if twitter_handles:
+        if twitter_handles is not False:
             self._matcher.add('TWITTER_HANDLE', self._handles_postprocess,
                               [{twitter_handle_flag: True}])
 
-        if hashtags:
+        if hashtags is not False:
             self._matcher.add('HASHTAG', self._hashtag_postprocess, [
                 {hashtag_flag: True}])
 
@@ -715,6 +716,7 @@ class CrazyTokenizer(object):
                     '(UnicodeDecodeError while trying to remove non-unicode characters')
         if self.params['decontract']:
             text = self._decontract(text)
+        text = html.unescape(text)
 
         if self.params['latin_chars_fix']:
             if EMOJIS_UTF_RE.findall(text):

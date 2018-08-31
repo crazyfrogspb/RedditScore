@@ -1,8 +1,4 @@
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
 
 from keras.initializers import RandomNormal
 from keras.layers import Dense, Embedding, GlobalAveragePooling1D
@@ -140,46 +136,3 @@ class MLPModel(redditmodel.RedditModel):
                             batch_size=batch_size,
                             epochs=epochs,
                             verbose=self.verbose)
-
-
-class CNN_Text(nn.Module):
-    def __init__(self,
-                 embed_num,
-                 embed_dim,
-                 class_num,
-                 kernel_num,
-                 kernel_sizes,
-                 dropout):
-        super(CNN_Text, self).__init__()
-
-        V = embed_num
-        D = embed_dim
-        C = class_num
-        Ci = 1
-        Co = kernel_num
-        Ks = kernel_sizes
-
-        self.embed = nn.Embedding(V, D)
-        self.convs1 = nn.ModuleList([nn.Conv2d(Ci, Co, (K, D)) for K in Ks])
-        self.dropout = nn.Dropout(dropout)
-        self.fc1 = nn.Linear(len(Ks) * Co, C)
-
-    def forward(self, x):
-        x = self.embed(x)
-
-        if self.args.static:
-            x = Variable(x)
-
-        x = x.unsqueeze(1)
-
-        x = [F.relu(conv(x)).squeeze(3)
-             for conv in self.convs1]
-
-        x = [F.max_pool1d(i, i.size(2)).squeeze(2)
-             for i in x]
-
-        x = torch.cat(x, 1)
-
-        x = self.dropout(x)
-        logit = self.fc1(x)
-        return logit

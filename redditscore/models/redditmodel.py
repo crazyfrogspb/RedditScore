@@ -25,13 +25,13 @@ import pandas as pd
 import scipy.cluster.hierarchy as hac
 from adjustText import adjust_text
 from scipy.cluster.hierarchy import fcluster
+
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.manifold import TSNE
 from sklearn.metrics import log_loss, make_scorer
 from sklearn.model_selection import (PredefinedSplit, check_cv,
                                      cross_val_score, train_test_split)
-from sklearn.preprocessing import MultiLabelBinarizer
 
 DEFAULT_LINKAGE_PARS = {'method': 'average', 'metric': 'cosine',
                         'optimal_ordering': True}
