@@ -24,7 +24,7 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
                  linkage_pars=None, random_state=24, verbose=True,
                  models_dir=None):
         self.estimator = estimator
-        if self.estimator.__name__ == 'FastTextModel':
+        if self.estimator.__class__.__name__ == 'FastTextModel':
             self.fasttext_ = True
         else:
             self.fasttext_ = False
