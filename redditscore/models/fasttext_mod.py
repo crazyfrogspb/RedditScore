@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+j  # -*- coding: utf-8 -*-
 """
 FastTextModel: A wrapper for Facebook fastText model
 
@@ -80,7 +80,7 @@ def _data_to_temp(X, label, y=None):
                     for true_label in y[i]:
                         doc += label + true_label + ' '
                 else:
-                    doc += label + y[i] + ' '
+                    doc += '{}{} '.format(label, y[i])
 
                 if isinstance(X[i], list):
                     doc += ' '.join(X[i])
@@ -244,7 +244,8 @@ class FastTextModel(redditmodel.RedditModel):
         emb = pd.read_csv(
             path, skiprows=[0], delimiter=' ', header=None).dropna(axis=1)
         emb = emb.round(decimals=5)
-        emb[0] = emb[0].str[len(self.model.label):]
+        emb[0] = pd.to_numeric(
+            emb[0].str[len(self.model.label):], errors='ignore')
         emb.set_index(0, inplace=True)
         self.class_embeddings = emb.loc[self.classes_]
         os.remove(path)
