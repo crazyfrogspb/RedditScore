@@ -22,7 +22,7 @@ DEFAULT_LINKAGE_PARS = {'method': 'average',
 class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
     def __init__(self, class_embeddings, class_labels, estimator,
                  linkage_pars=None, random_state=24, verbose=True,
-                 models_dir=None):
+                 models_dir=None, downsample=False):
         self.estimator = estimator
         if self.estimator.__class__.__name__ == 'FastTextModel':
             self.fasttext_ = True
@@ -32,6 +32,7 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
         self.random_state = random_state
         self.verbose = verbose
         self.models_dir = models_dir
+        self.downsample = downsample
 
         self.labels_dict = {}
         for i, class_label in enumerate(class_labels):
@@ -91,14 +92,14 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
         for succ in self.graph_.successors(node):
             y_.loc[y.isin(self.graph_.nodes[succ]['flat_classes'])] = succ
 
-        sample_size = y_.value_counts().min()
-
         X_.reset_index(drop=True, inplace=True)
         y_.reset_index(drop=True, inplace=True)
 
-        X_ = X_.groupby(y_).apply(lambda x: x.sample(
-            sample_size, random_state=self.random_state)).reset_index(level=0, drop=True)
-        y_ = y_.loc[X_.index]
+        if self.downsample:
+            sample_size = y_.value_counts().min()
+            X_ = X_.groupby(y_).apply(lambda x: x.sample(
+                sample_size, random_state=self.random_state)).reset_index(level=0, drop=True)
+            y_ = y_.loc[X_.index]
 
         clf_ft = deepcopy(self.estimator)
         clf_ft.fit(X_, y_)
