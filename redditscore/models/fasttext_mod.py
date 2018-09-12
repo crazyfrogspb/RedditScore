@@ -16,9 +16,10 @@ import tempfile
 import warnings
 from collections import Sequence
 
-import fastText
 import numpy as np
 import pandas as pd
+
+import fastText
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 from . import redditmodel
@@ -236,7 +237,7 @@ class FastTextModel(redditmodel.RedditModel):
         else:
             unique_labels = np.unique(y)
 
-        self._classes = np.array(sorted(unique_labels))
+        self.classes_ = np.array(sorted(unique_labels))
         self.model.fit(X, y)
         fd, path = tempfile.mkstemp()
         self.model._model.save_softmax(path)
@@ -245,7 +246,7 @@ class FastTextModel(redditmodel.RedditModel):
         emb = emb.round(decimals=5)
         emb[0] = emb[0].str[len(self.model.label):]
         emb.set_index(0, inplace=True)
-        self.class_embeddings = emb.loc[self._classes]
+        self.class_embeddings = emb.loc[self.classes_]
         os.remove(path)
         self.fitted = True
         return self

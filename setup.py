@@ -46,6 +46,8 @@ setup(
     license=license,
     packages=find_packages(exclude=('tests', 'docs')),
     include_package_data=True,
+    package_dir={'redditscore': 'redditscore'},
+    package_data={'redditscore': ['data/*.*']},
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS,
     dependency_links=[

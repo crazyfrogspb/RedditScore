@@ -23,9 +23,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as hac
-from adjustText import adjust_text
 from scipy.cluster.hierarchy import fcluster
 
+from adjustText import adjust_text
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.manifold import TSNE
@@ -155,7 +155,7 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
     def __init__(self, random_state=24):
         self.random_state = random_state
         self.model = None
-        self._classes = None
+        self.classes_ = None
         self.fitted = False
         self.class_embeddings = None
         self.params = {}
@@ -203,7 +203,7 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
             raise ValueError(
                 'Cross validation does not support multilabels yet')
 
-        self._classes = sorted(np.unique(y))
+        self.classes_ = sorted(np.unique(y))
         np.random.seed(self.random_state)
         if isinstance(cv, float):
             train_ind, __ = train_test_split(np.arange(0, len(X)),
@@ -216,7 +216,7 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
             cv_split = check_cv(cv, y=y, classifier=True)
 
         if scoring == 'neg_log_loss':
-            scoring = make_scorer(log_loss, labels=self._classes,
+            scoring = make_scorer(log_loss, labels=self.classes_,
                                   greater_is_better=False, needs_proba=True)
         elif scoring == 'top_k_accuracy':
             scoring = make_scorer(top_k_accuracy_score, k=k,
@@ -269,7 +269,7 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
         best_value: float
             Best value of the chosen metric
         """
-        self._classes = sorted(np.unique(y))
+        self.classes_ = sorted(np.unique(y))
 
         model_name = None
         if param_grid is None:
@@ -351,7 +351,7 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
         RedditModel
             Fitted model object
         """
-        self._classes = np.array(sorted(np.unique(y)))
+        self.classes_ = np.array(sorted(np.unique(y)))
         if not isinstance(X, np.ndarray):
             X = np.array(X)
         if not isinstance(y, np.ndarray):
@@ -510,25 +510,25 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
             legend_pars = {**DEFAULT_LEGEND_PARS, **legend_pars}
 
         z = hac.linkage(self.class_embeddings.loc[classes, :], **linkage_pars)
-        plt.figure(figsize=fig_sizes[0])
+        fig1 = plt.figure(figsize=fig_sizes[0])
         fancy_dendrogram(z, classes, **dendrogram_pars)
 
         clusters = fcluster(z, **clustering_pars) - 1
         df_clust = pd.DataFrame({'classes': classes, 'cluster': clusters})
         num_cl = len(df_clust.cluster.unique())
-        numdocvec = len(classes)
         tsne = TSNE(n_components=2, **tsne_pars)
         Y = tsne.fit_transform(self.class_embeddings.loc[classes, :])
-        fig, ax = plt.subplots(figsize=fig_sizes[1])
+        fig2, ax2 = plt.subplots(figsize=fig_sizes[1])
         colors = cm.jet(np.linspace(0, 1, num_cl))
         for i in range(num_cl):
-            ax.plot(Y[clusters == i, 0], Y[clusters == i, 1],
-                    marker='o', linestyle='', color=colors[i])
-        ax.margins(0.05)
-        ax.legend(**legend_pars)
+            ax2.plot(Y[clusters == i, 0], Y[clusters == i, 1],
+                     marker='o', linestyle='', color=colors[i])
+        ax2.margins(0.05)
+        ax2.legend(**legend_pars)
         texts = []
         for i in range(len(classes)):
             texts.append(plt.text(Y[i, 0], Y[i, 1], classes[i],
                                   fontsize=label_font_size))
         adjust_text(texts, arrowprops=dict(
             arrowstyle="-", color='black', lw=0.55))
+        return fig1, fig2
