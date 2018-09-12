@@ -5,6 +5,7 @@ from collections import deque
 from copy import deepcopy
 
 import numpy as np
+import pandas as pd
 import scipy.cluster.hierarchy as hac
 from scipy.cluster.hierarchy import to_tree
 from tqdm import tqdm
@@ -88,12 +89,12 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
 
     def _train_estimator(self, node, X, y):
         X_ = X.copy()
-        y_ = y.copy()
+        y_ = pd.Series().reindex_like(y)
         for succ in self.graph_.successors(node):
             y_.loc[y.isin(self.graph_.nodes[succ]['flat_classes'])] = succ
 
-        X_.reset_index(drop=True, inplace=True)
-        y_.reset_index(drop=True, inplace=True)
+        y_.dropna(inplace=True)
+        X_ = X_.loc[y_.index]
 
         if self.downsample:
             sample_size = y_.value_counts().min()
@@ -106,11 +107,13 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
         return clf_ft
 
     def fit(self, X, y):
+        X_ = X.reset_index(drop=True)
+        y_ = y.reset_index(drop=True)
         for node in tqdm(nx.algorithms.traversal.depth_first_search.dfs_preorder_nodes(self.graph_)):
             if self.graph_.out_degree(node) != 0:
                 if self.verbose:
                     print('Fitting model for class {}'.format(node))
-                clf = self._train_estimator(node, X, y)
+                clf = self._train_estimator(node, X_, y_)
                 if self.models_dir:
                     model_path = os.path.join(
                         self.models_dir, 'model_{}'.format(node))
