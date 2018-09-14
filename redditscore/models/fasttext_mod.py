@@ -244,8 +244,7 @@ class FastTextModel(redditmodel.RedditModel):
         emb = pd.read_csv(
             path, skiprows=[0], delimiter=' ', header=None).dropna(axis=1)
         emb = emb.round(decimals=5)
-        emb[0] = pd.to_numeric(
-            emb[0].str[len(self.model.label):], errors='ignore')
+        emb[0] = emb[0].str[len(self.model.label):]
         emb.set_index(0, inplace=True)
         self.class_embeddings = emb.loc[self.classes_]
         os.remove(path)
@@ -263,6 +262,9 @@ class FastTextModel(redditmodel.RedditModel):
             file extensions.
 
         """
+        self.model._model.save_model(os.path.splitext(filepath)[0] + '.bin')
+        self.model._model = None
         with open(os.path.splitext(filepath)[0] + '.pkl', 'wb') as f:
             pickle.dump(self, f)
-        self.model._model.save_model(os.path.splitext(filepath)[0] + '.bin')
+        self.model._model = fastText.load_model(
+            os.path.splitext(filepath)[0] + '.bin')

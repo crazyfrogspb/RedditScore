@@ -45,32 +45,43 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
             linkage_pars = {**DEFAULT_LINKAGE_PARS, **linkage_pars}
         self.z = hac.linkage(class_embeddings, **linkage_pars)
 
+        self._build_graph()
+
+    def _build_graph(self):
         self.root_ = to_tree(self.z)
         self.root_id_ = str(self.root_.id)
         self.graph_ = nx.DiGraph()
-        self.graph_.add_node(self.root_.id)
+        self.graph_.add_node(self.root_id_)
         for node in self._walk(self.root_):
-            label = self.labels_dict.get(node.id, node.id)
+            label = str(self.labels_dict.get(node.id, node.id))
             self.graph_.nodes[label]['model'] = None
             self.graph_.nodes[label]['flat_classes'] = list(
                 map(self.labels_dict.get, node.pre_order()))
+            self.graph_.nodes[label]['left'] = None
+            self.graph_.nodes[label]['right'] = None
             if node.left:
-                label_left = self.labels_dict.get(node.left.id, node.left.id)
+                label_left = str(self.labels_dict.get(
+                    node.left.id, node.left.id))
                 self.graph_.add_node(label_left)
                 self.graph_.add_edge(label, label_left)
+                self.graph_.nodes[label]['left'] = label_left
             if node.right:
-                label_right = self.labels_dict.get(node.right.id, node.right.id)
+                label_right = str(self.labels_dict.get(
+                    node.right.id, node.right.id))
                 self.graph_.add_node(label_right)
                 self.graph_.add_edge(label, label_right)
+                self.graph_.nodes[label]['right'] = label_right
 
-        mapping = {elem: 'class_{}'.format(elem)
-                   for elem in list(self.graph_.nodes)}
-        self.graph_ = nx.relabel_nodes(self.graph_, mapping)
         self.classes_ = list(
             node
             for node in self.graph_.nodes()
             if node != self.root_id_
         )
+
+        self.paths_ = {}
+        for class_ in self.classes_:
+            self.paths_[class_] = nx.shortest_path(
+                self.graph_, self.root_id_, class_)
 
     @staticmethod
     def _walk(node):
@@ -109,12 +120,12 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
     def fit(self, X, y):
         X_ = X.reset_index(drop=True)
         y_ = y.reset_index(drop=True)
-        for node in tqdm(nx.algorithms.traversal.depth_first_search.dfs_preorder_nodes(self.graph_)):
+        for node in self.graph_.nodes:
             if self.graph_.out_degree(node) != 0:
                 if self.verbose:
                     print('Fitting model for class {}'.format(node))
-                clf = self._train_estimator(node, X_, y_)
                 if self.models_dir:
+                    clf = self._train_estimator(node, X_, y_)
                     model_path = os.path.join(
                         self.models_dir, 'model_{}'.format(node))
                     if self.fasttext_:
@@ -124,7 +135,8 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
                             pickle.dump(clf, f)
                     self.graph_.nodes[node]['model'] = model_path
                 else:
-                    self.graph_.nodes[node]['model'] = deepcopy(clf)
+                    self.graph_.nodes[node]['model'] = self._train_estimator(
+                        node, X_, y_)
             else:
                 if self.verbose:
                     print('Reached terminal node for class {}'.format(node))
@@ -142,57 +154,48 @@ class HierarchicalClassifier(BaseEstimator, TransformerMixin, metaclass=ABCMeta)
                 clf = pickle.load(f)
         return clf
 
-    def _recursive_predict(self, x, root):
-        if self.models_dir:
-            clf = self.load_model(root)
-        else:
-            clf = self.graph_.nodes[root]['model']
-        path = [root]
-        path_proba = []
-        class_proba = np.zeros_like(self.classes_, dtype=np.float64)
+    def _generate_prob_matrix(self, X):
+        split_nodes = [
+            node for node in self.graph_.nodes if self.graph_.out_degree(node) > 0]
+        predictions = pd.DataFrame(
+            index=X.index, columns=split_nodes)
+        for node in split_nodes:
+            if self.models_dir:
+                clf = self.load_model(node)
+            else:
+                clf = self.graph_.nodes[node]['model']
+            probs = clf.predict_proba(X)
+            mapping = {self.graph_.nodes[node]['left']: 'left',
+                       self.graph_.nodes[node]['right']: 'right'}
+            probs.rename(columns=mapping, inplace=True)
+            predictions.loc[:, node] = probs['left'].copy()
 
-        while clf:
-            probs = clf.predict_proba(x)[0]
-            argmax = np.argmax(probs)
-            score = probs[argmax]
-            path_proba.append(score)
-
-            for local_class_idx, class_ in enumerate(clf.classes_):
-                class_idx = self.classes_.index(class_)
-                class_proba[class_idx] = probs[local_class_idx]
-                if local_class_idx == argmax:
-                    prediction = class_
-
-            path.append(prediction)
-        if self.models_dir:
-            clf = self.load_model(prediction)
-        else:
-            clf = self.graph_.nodes[prediction].get('model', None)
-
-        return path, class_proba
+        return predictions
 
     def predict(self, X):
         if not self.fitted:
             raise NotFittedError('Model has to be fitted first')
 
-        def _classify(x):
-            path, _ = self._recursive_predict(
-                x, root=self.graph_[self.root_id_])
-            return path[-1]
+        predictions = self.predict_proba(X)
 
-        y_pred = X.apply(_classify)
-
-        return y_pred
+        return predictions.idxmax(axis=1)
 
     def predict_proba(self, X):
         if not self.fitted:
             raise NotFittedError('Model has to be fitted first')
 
-        def _classify(x):
-            _, scores = self._recursive_predict(
-                x, root=self.graph_[self.root_id_])
-            return scores
+        predictions = pd.DataFrame(
+            index=X.index, columns=self.labels_dict.values())
+        prob_matrix = self._generate_prob_matrix(X)
+        for i, class_label in self.labels_dict.items():
+            probabilities = np.ones((len(X), ))
+            prev_node = self.paths_[class_label][0]
+            for cur_node in self.paths_[class_label][1:]:
+                if self.graph_.nodes[prev_node]['left'] == cur_node:
+                    probabilities *= prob_matrix.loc[:, prev_node]
+                else:
+                    probabilities *= (1 - prob_matrix.loc[:, prev_node])
+                prev_node = cur_node
+            predictions.loc[:, class_label] = probabilities
 
-        y_pred = X.apply(_classify)
-
-        return y_pred
+        return predictions
