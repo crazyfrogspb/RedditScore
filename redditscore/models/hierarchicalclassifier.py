@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as hac
 from scipy.cluster.hierarchy import to_tree
-from tqdm import tqdm
 
 import networkx as nx
 from sklearn.base import BaseEstimator, TransformerMixin

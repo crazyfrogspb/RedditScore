@@ -23,9 +23,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as hac
-from scipy.cluster.hierarchy import fcluster
-
 from adjustText import adjust_text
+from scipy.cluster.hierarchy import fcluster
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.manifold import TSNE
@@ -496,7 +495,7 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
             raise ValueError(
                 'Plotting dendrograms is not available for this class of model')
         if classes is None:
-            classes = self._classes
+            classes = self.classes_
 
         if linkage_pars is None:
             linkage_pars = DEFAULT_LINKAGE_PARS
