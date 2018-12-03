@@ -14,11 +14,15 @@ This work is licensed under the terms of the MIT license.
 
 import datetime
 import math
+import os.path as osp
 import warnings
 from time import sleep
 
 import pandas as pd
+from dateutil import parser
+
 import tweepy
+from congress import Congress
 
 try:
     from selenium import webdriver
@@ -132,19 +136,6 @@ def _grab_even_more_tweets(screen_name, dates, browser, delay=1.0):
     return ids
 
 
-def _authenticate(twitter_creds):
-    try:
-        auth = tweepy.OAuthHandler(
-            twitter_creds['consumer_key'], twitter_creds['consumer_secret'])
-        auth.set_access_token(
-            twitter_creds['access_key'], twitter_creds['access_secret'])
-        api = tweepy.API(auth)
-        return api
-    except KeyError as e:
-        raise Exception(("twitter_creds must contain cosnumer_key,"
-                         " consumer_secret, access_key, and access_secret keys"))
-
-
 def _handle_tweepy_error(e, user):
     if e.api_code == 34:
         warnings.warn("{} doesn't exist".format(user))
@@ -154,7 +145,29 @@ def _handle_tweepy_error(e, user):
     return pd.DataFrame()
 
 
-def grab_tweets(twitter_creds, screen_name=None, user_id=None, timeout=0.1,
+def generate_api(twitter_creds_list):
+    auths = []
+    for creds in twitter_creds_list:
+        try:
+            auth = tweepy.OAuthHandler(
+                creds['consumer_key'], creds['consumer_secret'])
+            auth.set_access_token(creds['access_key'], creds['access_secret'])
+        except KeyError as e:
+            raise Exception(("twitter_creds must contain cosnumer_key,"
+                             " consumer_secret, access_key, and access_secret keys"))
+        auths.append(auth)
+    api = tweepy.API(
+        auths,
+        retry_count=3,
+        retry_delay=5,
+        retry_errors=set([401, 404, 500, 503]),
+        monitor_rate_limit=True,
+        wait_on_rate_limit=True,
+        wait_on_rate_limit_notify=True)
+    return api
+
+
+def grab_tweets(twitter_creds=None, api=None, screen_name=None, user_id=None, timeout=0.1,
                 fields=None, get_more=False, browser='Firefox',
                 start_date=None):
     """
@@ -163,7 +176,7 @@ def grab_tweets(twitter_creds, screen_name=None, user_id=None, timeout=0.1,
     Parameters
     ----------
     twitter_creds: dict
-        Dictionary with Twitter authentication credentials.
+        Dictionary or list with Twitter authentication credentials.
         Has to contain consumer_key, consumer_secret, access_key, access_secret
 
     screen_name : str, optional
@@ -197,7 +210,7 @@ def grab_tweets(twitter_creds, screen_name=None, user_id=None, timeout=0.1,
     if not (bool(screen_name) != bool(user_id)):
         raise ValueError('You have to provide either screen_name or user_id')
 
-    api = _authenticate(twitter_creds)
+    api = generate_api(list(twitter_creds))
 
     if user_id:
         try:
@@ -275,3 +288,92 @@ def grab_tweets(twitter_creds, screen_name=None, user_id=None, timeout=0.1,
         full_tweets['user_id'] = user_id
     full_tweets.drop_duplicates('id', inplace=True)
     return full_tweets
+
+
+def collect_congress_tweets(congress_list, congress_tweets_file,
+                            meta_info_file, start_date, twitter_creds,
+                            chambers=None, propublica_api_key=None,
+                            append_frequency=10, browser='Chrome',
+                            fields=None):
+    """Collect tweets from American Congressmen.
+
+    Parameters
+    ----------
+    congress_list : iterable
+        List with Congress numbers to collect data for.
+    congress_tweets_file : str
+        Path to the output file with tweets.
+    meta_info_file : str
+        Path to the output file with meta information about the Congress.
+    start_date : str
+        The first date to start pulling extra tweets.
+    twitter_creds : type
+        Dictionary or list with Twitter authentication credentials.
+        Has to contain consumer_key, consumer_secret, access_key, access_secret
+    chambers : iterable, optional
+        List of Chambers to collect tweets for (the default is Senate and House).
+    propublica_api_key : str, optional
+        API key for free Propublica Congress API (the default is None).
+        https://www.propublica.org/datastore/api/propublica-congress-api
+    append_frequency : int, optional
+        Frequency of dumping new tweets to CSV (the default is 10).
+    browser : type
+        Browser for Selenium to use. Corresponding browser and its webdriver
+        have to be installed (the default is 'Chrome').
+    fields : type
+        Extra fields to pull from the tweets (the default is retweet_count and favorite_count).
+    """
+    if chambers is None:
+        chambers = ['House', 'Senate']
+    if fields is None:
+        fields = ['retweet_count', 'favorite_count']
+
+    if osp.isfile(meta_info_file):
+        members = pd.read_csv(meta_info_file)
+    else:
+        congress = Congress(propublica_api_key)
+        all_members = []
+        for congress_num in congress_list:
+            for chamber in chambers:
+                members = pd.DataFrame(congress.members.filter(
+                    chamber, congress=congress_num)[0]['members'])
+                members['chamber'] = chamber
+                members['congress_num'] = congress_num
+                all_members.append(members)
+        members = pd.concat(all_members)
+        members.to_csv(meta_info_file, index=False)
+
+    twitter_handles = members.twitter_account.unique()
+    start_date = parser.parse(start_date)
+    if osp.isfile(congress_tweets_file):
+        tweets = pd.read_csv(congress_tweets_file,
+                             lineterminator='\n', usecols=['screen_name'])
+        parsed_handles = list(tweets['screen_name'].unique())
+        del tweets
+    else:
+        parsed_handles = []
+
+    dfs = []
+    for i, twitter_handle in enumerate(twitter_handles):
+        if twitter_handle in parsed_handles or pd.isnull(twitter_handle):
+            continue
+
+        try:
+            df = grab_tweets(twitter_creds, screen_name=twitter_handle, timeout=1.0,
+                             get_more=True, start_date=start_date, browser=browser, fields=fields)
+        except Exception as e:
+            warnings.warn(f'Exception occured for {twitter_handles}: {e}')
+
+        parsed_handles.append(twitter_handle)
+        if df.empty:
+            continue
+        df = df.loc[df.created_at >= pd.Timestamp(start_date)]
+        dfs.append(df)
+        if len(dfs) == append_frequency or i == (len(twitter_handles) - 1):
+            df = pd.concat(dfs)
+            if osp.file(congress_tweets_file):
+                df.to_csv(congress_tweets_file, mode='a',
+                          header=False, index=False)
+            else:
+                df.to_csv(congress_tweets_file, index=False)
+            dfs = []
