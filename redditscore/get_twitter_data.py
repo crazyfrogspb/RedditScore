@@ -372,7 +372,7 @@ def collect_congress_tweets(congress_list, congress_tweets_file,
         dfs.append(df)
         if len(dfs) == append_frequency or i == (len(twitter_handles) - 1):
             df = pd.concat(dfs)
-            if osp.file(congress_tweets_file):
+            if osp.isfile(congress_tweets_file):
                 df.to_csv(congress_tweets_file, mode='a',
                           header=False, index=False)
             else:
