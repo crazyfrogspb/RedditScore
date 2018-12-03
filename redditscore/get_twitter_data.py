@@ -344,7 +344,7 @@ def collect_congress_tweets(congress_list, congress_tweets_file,
         members.to_csv(meta_info_file, index=False)
 
     twitter_handles = members.twitter_account.unique()
-    start_date = parser.parse(start_date)
+    start_date = parser.parse(start_date).date()
     if osp.isfile(congress_tweets_file):
         tweets = pd.read_csv(congress_tweets_file,
                              lineterminator='\n', usecols=['screen_name'])
@@ -362,7 +362,8 @@ def collect_congress_tweets(congress_list, congress_tweets_file,
             df = grab_tweets(twitter_creds, screen_name=twitter_handle, timeout=1.0,
                              get_more=True, start_date=start_date, browser=browser, fields=fields)
         except Exception as e:
-            warnings.warn(f'Exception occured for {twitter_handles}: {e}')
+            warnings.warn(f'Exception occured for {twitter_handle}: {e}')
+            continue
 
         parsed_handles.append(twitter_handle)
         if df.empty:
