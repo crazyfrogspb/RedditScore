@@ -15,6 +15,7 @@ This work is licensed under the terms of the MIT license.
 import datetime
 import math
 import os.path as osp
+import random
 import warnings
 from time import sleep
 
@@ -294,7 +295,7 @@ def collect_congress_tweets(congress_list, congress_tweets_file,
                             meta_info_file, start_date, twitter_creds,
                             chambers=None, propublica_api_key=None,
                             append_frequency=10, browser='Chrome',
-                            fields=None):
+                            fields=None, shuffle=False):
     """Collect tweets from American Congressmen.
 
     Parameters
@@ -317,11 +318,13 @@ def collect_congress_tweets(congress_list, congress_tweets_file,
         https://www.propublica.org/datastore/api/propublica-congress-api
     append_frequency : int, optional
         Frequency of dumping new tweets to CSV (the default is 10).
-    browser : type
+    browser : str, optional
         Browser for Selenium to use. Corresponding browser and its webdriver
         have to be installed (the default is 'Chrome').
-    fields : type
+    fields : iter, optional
         Extra fields to pull from the tweets (the default is retweet_count and favorite_count).
+    shuffle: bool, optional
+        Whether to shuffle twitter handles before collecting.
     """
     if chambers is None:
         chambers = ['House', 'Senate']
@@ -344,6 +347,8 @@ def collect_congress_tweets(congress_list, congress_tweets_file,
         members.to_csv(meta_info_file, index=False)
 
     twitter_handles = members.twitter_account.unique()
+    if shuffle:
+        random.shuffle(twitter_handles)
     start_date = parser.parse(start_date).date()
     if osp.isfile(congress_tweets_file):
         tweets = pd.read_csv(congress_tweets_file,
