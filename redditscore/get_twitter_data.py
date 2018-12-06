@@ -26,6 +26,7 @@ import tweepy
 from congress import Congress
 
 try:
+    from selenium import webdriver
     from selenium.common.exceptions import (NoSuchElementException,
                                             TimeoutException,
                                             StaleElementReferenceException,
