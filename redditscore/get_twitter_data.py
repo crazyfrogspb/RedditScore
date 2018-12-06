@@ -26,8 +26,9 @@ import tweepy
 from congress import Congress
 
 try:
-    from selenium import webdriver
+    python
     from selenium.common.exceptions import (NoSuchElementException,
+                                            TimeoutException,
                                             StaleElementReferenceException,
                                             WebDriverException)
 except ImportError:
@@ -130,6 +131,8 @@ def _grab_even_more_tweets(screen_name, dates, browser, delay=1.0):
                 except StaleElementReferenceException as e:
                     pass
         except NoSuchElementException:
+            pass
+        except TimeoutException:
             pass
 
         startdate = _increment_day(startdate, 1)
