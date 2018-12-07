@@ -27,9 +27,8 @@ from socket import gaierror
 from urllib import parse
 
 import requests
-from bs4 import BeautifulSoup
-
 import tldextract
+from bs4 import BeautifulSoup
 from eventlet.green.urllib.request import urlopen
 from eventlet.timeout import Timeout
 from redditscore.models.redditmodel import word_ngrams
@@ -706,6 +705,7 @@ class CrazyTokenizer(object):
 
     def _preprocess_text(self, text):
         # Do some preprocessing
+        text = re.sub("’", "'", text)
         if self.params['remove_nonunicode']:
             try:
                 text = text.encode('utf-8').decode('unicode-escape')
