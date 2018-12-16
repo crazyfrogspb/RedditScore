@@ -402,14 +402,13 @@ class RedditModel(BaseEstimator, TransformerMixin, metaclass=ABCMeta):
         if isinstance(X, pd.DataFrame) or isinstance(X, pd.Series):
             indices = X.index
         else:
-            indices = range(len(X))
+            indices = list(range(len(X)))
 
         if not isinstance(X, np.ndarray):
             X = np.array(X, ndmin=1)
 
         probs = self.model.predict_proba(X)
-
-        probs.set_index(indices, inplace=True)
+        probs.index = indices
 
         return probs
 
