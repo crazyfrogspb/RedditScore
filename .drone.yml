@@ -1,0 +1,50 @@
+---
+pipeline:
+  auth:
+    image: banjoinc/drone-auth-ecr
+    commands:
+    - aws ecr get-login --region us-east-1 | bash
+    - docker pull 646497312978.dkr.ecr.us-east-1.amazonaws.com/banjo-docker-support:python-3.6-slim
+    secrets: [ aws_access_key_id, aws_secret_access_key ]
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  test:
+    image: 646497312978.dkr.ecr.us-east-1.amazonaws.com/banjo-docker-support:python-3.6-slim
+    volumes:
+    - /etc/drone/pip_dev.conf:/etc/pip.conf
+    commands:
+    - apt-get install -y build-essential
+    - pip3 install -U pylint nose awscli==1.16.35
+    - pip3 install --user -r requirements.txt
+    - nosetests tests
+    - pylint redditscore || exit 0
+  publish_dev_repo:
+    image: 646497312978.dkr.ecr.us-east-1.amazonaws.com/banjo-docker-support:python-3.6-slim
+    volumes:
+    - /etc/drone/.pypirc_dev:/root/.pypirc
+    - /etc/drone/pip_dev.conf:/etc/pip.conf
+    commands:
+    - export PROJECT_VERSION=`cat setup.py | grep version | awk -F'"' '$0=$2'`
+    - export ITERATION=`git describe --tags --dirty | cut -d '-' -f 2`
+    - sed -i "s/version=.*/version='$PROJECT_VERSION.dev$ITERATION',/g" setup.py
+    - python setup.py clean sdist bdist_wheel --universal upload -r local
+    when:
+      branch: develop
+  publish_release_repo:
+    image: 646497312978.dkr.ecr.us-east-1.amazonaws.com/banjo-docker-support:python-3.6-slim
+    volumes:
+    - /etc/drone/.pypirc_release:/root/.pypirc
+    - /etc/drone/pip_release.conf:/etc/pip.conf
+    commands:
+    - sed -i "s/version=.*/version='$DRONE_TAG',/g" setup.py
+    - python setup.py clean sdist bdist_wheel --universal upload -r local
+    when:
+      event: tag
+  slack:
+    image: plugins/slack
+    channel: jenkins-ops
+    webhook: https://hooks.slack.com/services/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
+    username: Drone
+    when:
+      status: changed
+
