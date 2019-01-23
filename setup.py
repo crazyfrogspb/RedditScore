@@ -37,7 +37,7 @@ with open('LICENSE') as f:
 
 setup(
     name='redditscore',
-    version='0.7.3',
+    version='0.7.4',
     description='Package for performing Reddit-based text analysis',
     long_description=readme,
     author='Evgenii Nikitin',

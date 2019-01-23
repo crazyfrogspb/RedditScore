@@ -81,11 +81,11 @@ DECONTRACTIONS = OrderedDict([("won't", "will not"), ("can't", "can not"),
 DATA_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                          os.path.join('data'))
 
-with open(os.path.join(DATA_PATH, 'emojis_utf.json')) as f:
+with open(os.path.join(DATA_PATH, 'emojis_utf.json'), encoding="utf-8") as f:
     EMOJIS_UTF = json.load(f)
-with open(os.path.join(DATA_PATH, 'emojis_unicode.json')) as f:
+with open(os.path.join(DATA_PATH, 'emojis_unicode.json'), encoding="utf-8") as f:
     EMOJIS_UNICODE = json.load(f)
-with open(os.path.join(DATA_PATH, 'latin_chars.json')) as f:
+with open(os.path.join(DATA_PATH, 'latin_chars.json'), encoding="utf-8") as f:
     LATIN_CHARS = json.load(f)
 
 EMOJIS_UTF_RE = re.compile(r"\\x", re.IGNORECASE)
@@ -459,14 +459,14 @@ class CrazyTokenizer(object):
 
         if hashtags == 'split' or twitter_handles == 'split':
             file = os.path.join(DATA_PATH, 'wordsfreq_wiki2.txt')
-            with open(file) as f:
+            with open(file, encoding="utf-8") as f:
                 self._words = f.read().split()
             self._wordcost = dict((k, log((i + 1) * log(len(self._words))))
                                   for i, k in enumerate(self._words))
             self._maxword = max(len(x) for x in self._words)
 
         if twitter_handles == 'realname':
-            with open(os.path.join(DATA_PATH, 'realnames.json')) as f:
+            with open(os.path.join(DATA_PATH, 'realnames.json'), encoding="utf-8") as f:
                 self._realnames = json.load(f)
 
         if ignore_quotes:
